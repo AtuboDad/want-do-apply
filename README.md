@@ -114,7 +114,10 @@ want-do-apply/
 
 ### 1. 准备中间件
 
-需要一个 MySQL 8 和一个 Redis 6+。连接信息全部走环境变量（**密码不写进代码**）：
+需要一个 MySQL 8 和一个 Redis 6+。
+
+主机、库名等非敏感项在 `application-dev.yml` 里有默认值，可用环境变量覆盖；
+**密码走 `application-local.yml`**（见下面「本地私有配置」），或临时用环境变量：
 
 ```bash
 export DB_HOST=127.0.0.1
@@ -142,15 +145,24 @@ mysql -h$DB_HOST -u$DB_USERNAME -p want_do_apply < ry_apply_menu.sql
 
 ### 3. 起后端
 
+先按上一节创建 `application-local.yml`（数据库密码、微信 AppSecret），然后：
+
 ```bash
 cd backend
-mvn -pl ruoyi-admin -am clean package -DskipTests
-java -jar ruoyi-admin/target/ruoyi-admin.jar --server.port=8080
+mvn -pl ruoyi-admin -am package -DskipTests
+
+# 方式一：用脚本（已封装端口 / profile / JDK 检查）
+../scripts/start-backend.sh
+
+# 方式二：手动起，注意必须带 dev,local 两个 profile
+java -jar ruoyi-admin/target/ruoyi-admin.jar --server.port=8080 --spring.profiles.active=dev,local
 ```
 
 > ⚠️ 必须显式指定 `--server.port=8080`。某些 IDE / 宿主进程会注入 `SERVER__PORT` 环境变量，Spring Boot 松散绑定会把它当成 `server.port` 覆盖掉。
 
-> ⚠️ 本机如果装了多个 JDK，注意用 **JDK 21** 启动（`java -version` 先确认），JDK 8 会报 `UnsupportedClassVersionError`。
+> ⚠️ 本机如果装了多个 JDK，注意用 **JDK 21** 启动（`java -version` 先确认），JDK 8 会报 `UnsupportedClassVersionError`。脚本可用 `JAVA_BIN=/path/to/jdk-21/bin/java` 指定。
+
+> ⚠️ 少了 `local` profile 就会连不上库（密码读不到），报 `Access denied ... (using password: NO)`。
 
 启动后：
 - 管理端接口：`http://127.0.0.1:8080`
@@ -178,11 +190,12 @@ npm install
 npm run dev:mp-weixin      # 产物在 dist/dev/mp-weixin，用微信开发者工具打开
 ```
 
-**上线前必须配置**（见下一节）：
+**微信登录已接入真实 AppID**，凭据只存在本地 `application-local.yml`（不入库）：
 
-- `miniapp/src/manifest.json` 的 `mp-weixin.appid`
-- `miniapp/src/utils/config.ts` 的 `BASE_URL`（改成你的 HTTPS 域名）
-- 后端环境变量 `WX_APPID` / `WX_SECRET` / `WX_MOCK=false`
+- `miniapp/src/manifest.json` 的 `mp-weixin.appid` → 已填真实 AppID
+- 后端 `WX_APPID` / `WX_SECRET` / `WX_MOCK=false` → 见 `application-local.yml`
+- 上线前还要把 `miniapp/src/utils/config.ts` 的 `BASE_URL` 改成你的 HTTPS 域名
+  （微信要求 request 合法域名必须是 HTTPS，`127.0.0.1` 只能在开发者工具「不校验合法域名」时用）
 
 ---
 
@@ -197,19 +210,57 @@ npm run dev:mp-weixin      # 产物在 dist/dev/mp-weixin，用微信开发者�
 | `APPLY_UPLOAD_BASE_URL` | 空 | 图片外链前缀；留空则按当前请求域名拼接 |
 | `WX_APPID` | 空 | 小程序 AppID |
 | `WX_SECRET` | 空 | 小程序 AppSecret |
-| `WX_MOCK` | `true` | 为 `true` 时不调 `code2Session`，直接把 `dev:xxx` 映射成 `mock_md5(xxx)` 的固定用户——**仅用于本地联调** |
+| `WX_MOCK` | `true` | 为 `true` 时完全不调微信接口，任何人都能登录——**仅用于没有 AppID 时本地联调** |
+| `WX_ALLOW_DEV_CODE` | `false` | 是否放行前端伪造的 `dev:xxx` 凭证（H5 调试、接口冒烟测试用）——**生产必须 `false`** |
 
-> 生产环境务必设置 `WX_MOCK=false` 并填好 AppID/Secret，否则任何人都能伪造登录。
-> AppID/AppSecret 不要写进 Git，用环境变量或 `application-local.yml`（已在 `.gitignore`）。
+> 生产环境务必 `WX_MOCK=false` + `WX_ALLOW_DEV_CODE=false` + 填好 AppID/Secret，三者缺一都可能被伪造登录。
+> AppSecret 不要写进 Git，放 `application-local.yml` 或环境变量。
 
-### 小程序本地调试说明
+### 本地私有配置 `application-local.yml`
 
-`WX_MOCK=true` 时不需要真实 AppID：开发者工具的 `uni.login` 即使失败也会自动降级成 `dev:<随机ID>`，
-后端把它映射成一个固定用户。
+数据库密码和微信 AppSecret 都放这里，文件名已被 `.gitignore` 忽略。
 
-- 每台设备 / 每个开发者工具实例有一个随机 ID，存在 `wda_dev_id` 里；
-- **清缓存 → 换一个新用户**。想测「发起 + 批阅」两条链路，开两个实例（或清一次缓存）即可；
-- H5 端（`npm run dev:h5`）同理，走 vite 代理直连 8080。
+启用方式是**多 profile 叠加**：`--spring.profiles.active=dev,local`。
+Spring Boot 中后激活的 profile 优先级更高，所以 `local` 会覆盖 `dev` 里的兜底值。
+
+> ⚠️ 别用 `spring.config.import` 去加载它 —— 导入文件的优先级**低于**导入它的文件，
+> `application-dev.yml` 里的 `${DB_PASSWORD:}` 空值会反过来盖掉本地密码，现象是
+> `Access denied ... (using password: NO)`，排查起来很绕。
+
+模板：
+
+```yaml
+spring:
+  datasource:
+    dynamic:
+      datasource:
+        master:
+          username: your-db-user
+          password: 'your-db-password'
+
+apply:
+  wx:
+    app-id: wx1234567890abcdef
+    secret: your-app-secret
+    mock: false
+    allow-dev-code: true   # 本地开发可开，公网部署前改 false
+```
+
+### 小程序登录的两种模式
+
+| | `WX_MOCK=true` | 真实模式（`mock: false`） |
+| --- | --- | --- |
+| 登录凭证 | 任何 code 都行，`dev:xxx` → 固定用户 | 必须微信 `uni.login` 拿到的真 code |
+| 换 openid | 本地按 md5 伪造 | 真实调 `sns/jscode2session` |
+| 适用 | 没 AppID 时调页面 | 开发者工具 / 真机 / 生产 |
+| 多账号联调 | 清缓存换一个 `wda_dev_id` | 换微信账号登录 |
+
+真实模式下还有个 `allow-dev-code` 开关独立控制「是否接受前端伪造的 `dev:xxx`」：
+本地把后端跑在 `mock=false + allow-dev-code=true`，就能一边走真实微信校验、一边让 H5 和接口冒烟测试用假 code。
+**这个组合只能本地用**，公网部署前务必把 `allow-dev-code` 关掉。
+
+小程序端也做了对应防护：`npm run build:*` 产出的正式包里 `DEV_LOGIN_FALLBACK` 为 `false`，
+`uni.login` 失败时不再降级成假 code，而是直接报错——避免线上包把用户静默伪装成调试账号。
 
 ---
 

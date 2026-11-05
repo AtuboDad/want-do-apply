@@ -24,6 +24,8 @@ unpackage/
 miniapp/dist/
 miniapp/.hbuilderx/
 project.private.config.json
+# 开发者工具会在源码目录生成，构建产物里已自带一份，避免反复改动产生噪音
+miniapp/project.config.json
 
 # ===== IDE =====
 .idea/
@@ -31,6 +33,9 @@ project.private.config.json
 .vscode/
 *.swp
 *.swo
+
+# ===== 本地工具元数据 =====
+.workbuddy/
 
 # ===== OS =====
 .DS_Store

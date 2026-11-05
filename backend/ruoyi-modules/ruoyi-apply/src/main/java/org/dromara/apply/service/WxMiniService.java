@@ -34,6 +34,16 @@ public class WxMiniService {
     @Value("${apply.wx.mock:true}")
     private boolean mock;
 
+    /**
+     * 是否放行前端伪造的 dev:xxx 登录凭证。
+     * 仅用于本地联调（H5 调试、接口冒烟测试无法拿到微信真实 code）。
+     * 生产环境必须为 false，否则任何人都能伪造任意用户登录。
+     */
+    @Value("${apply.wx.allow-dev-code:false}")
+    private boolean allowDevCode;
+
+    private static final String DEV_CODE_PREFIX = "dev:";
+
     private final RestClient restClient = RestClient.create();
 
     /**
@@ -43,15 +53,18 @@ public class WxMiniService {
      * @return 会话信息
      */
     public WxSession code2Session(String code) {
+        // 开发用假 code 优先处理：命中时完全不碰微信接口，但必须显式开启开关
+        if (code.startsWith(DEV_CODE_PREFIX)) {
+            if (!allowDevCode) {
+                log.warn("收到 dev: 开头的登录凭证，但未开启 allow-dev-code，已拒绝");
+                throw new ServiceException("微信登录失败：非法的登录凭证");
+            }
+            log.debug("开发模式登录，标识={}", code.substring(DEV_CODE_PREFIX.length()));
+            return mockSession(code.substring(DEV_CODE_PREFIX.length()));
+        }
         if (mock || StringUtils.isBlank(appId) || StringUtils.isBlank(secret)) {
-            // 调试模式：单用户固定 openid；需要多账号时前端传 dev:xxx
-            String suffix = code.startsWith("dev:") ? code.substring(4) : "default";
-            WxSession session = new WxSession();
-            session.setOpenId("mock_" + DigestUtil.md5Hex(suffix).substring(0, 16));
-            session.setUnionId(null);
-            session.setSessionKey("mock-session-key");
-            session.setMock(true);
-            return session;
+            // 未配置真实凭据：单用户固定 openid
+            return mockSession("default");
         }
         try {
             String body = restClient.get()
@@ -83,6 +96,18 @@ public class WxMiniService {
 
     public boolean isMock() {
         return mock || StringUtils.isBlank(appId) || StringUtils.isBlank(secret);
+    }
+
+    /**
+     * 构造一个假的会话（相同 suffix 恒定映射到同一 openid，便于多账号联调）
+     */
+    private WxSession mockSession(String suffix) {
+        WxSession session = new WxSession();
+        session.setOpenId("mock_" + DigestUtil.md5Hex(suffix).substring(0, 16));
+        session.setUnionId(null);
+        session.setSessionKey("mock-session-key");
+        session.setMock(true);
+        return session;
     }
 
     /**

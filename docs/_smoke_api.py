@@ -109,6 +109,12 @@ r = call("GET", "/app/notice/unread", None, alice)
 check("unread", r.get("code") == 200, str(r.get("data")))
 
 print("== 10. 审批群 ==")
+# 每人最多 3 个群。先解散上一轮跑出来的，保证脚本可以反复执行。
+r = call("GET", "/app/group/mine", None, alice)
+for g in (r.get("data") or []):
+    if g.get("isOwner"):
+        call("POST", f"/app/group/{g['id']}/dissolve", None, alice)
+
 r = call("POST", "/app/group", {"name": "寝室的账本", "notice": "超过 500 的一律驳回"}, alice)
 check("create group", r.get("code") == 200, r.get("msg", ""))
 gid = r.get("data")

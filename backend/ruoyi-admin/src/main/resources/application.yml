@@ -402,4 +402,8 @@ apply:
     # 微信小程序 AppID / AppSecret，留空时自动进入 mock 登录（仅用于本地联调）
     app-id: ${WX_APPID:}
     secret: ${WX_SECRET:}
+    # true = 完全不调微信接口，任何人都能登录；生产必须 false
     mock: ${WX_MOCK:true}
+    # 是否放行前端伪造的 dev:xxx 凭证（本地 H5 调试与接口冒烟测试用）
+    # 生产环境必须 false，否则可绕过微信鉴权伪造任意用户
+    allow-dev-code: ${WX_ALLOW_DEV_CODE:false}

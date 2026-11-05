@@ -1,6 +1,7 @@
 import { request } from '../utils/request'
 import { setToken, setUser, isLogin, userStore } from '../store/user'
 import type { AppUserInfo } from '../store/user'
+import { DEV_LOGIN_FALLBACK } from '../utils/config'
 
 export interface LoginResult {
   token: string
@@ -16,13 +17,20 @@ function getWxCode(): Promise<string> {
     uni.login({
       provider: 'weixin',
       success: (res) => resolve(res.code as string),
-      // 本地调试时 manifest 里还是占位 AppID，uni.login 会失败。
-      // 降级成 dev: 前缀的假 code，后端 mock 模式下会映射成固定用户。
-      fail: () => resolve(devCode())
+      fail: (err) => {
+        // 开发构建下退化成 dev: 假 code，方便在开发者工具里继续调业务
+        // 正式包不降级：后端会走真实微信校验，伪造凭证必须失败
+        if (DEV_LOGIN_FALLBACK) {
+          resolve(devCode())
+        } else {
+          console.error('微信登录失败', err)
+          reject(new Error('微信登录失败，请稍后重试'))
+        }
+      }
     })
     // #endif
     // #ifndef MP-WEIXIN
-    // H5 / 其他平台本地联调：后端 mock 模式会把它映射成固定用户
+    // H5 仅用于本地调试，固定用 dev: 假 code（后端需开启 allow-dev-code）
     resolve(devCode())
     // #endif
   })
