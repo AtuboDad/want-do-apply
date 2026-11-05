@@ -1,7 +1,13 @@
 <template>
   <view class="panel">
-    <!-- 滚动区 -->
-    <scroll-view class="panel-scroll" scroll-y :show-scrollbar="false">
+    <!-- 滚动区：小程序里 scroll-view 不吃 flex 压缩，高度由 measureScroll() 算好写进 style -->
+    <scroll-view
+      class="panel-scroll"
+      :style="scrollStyle"
+      :scroll-top="scrollTop"
+      scroll-y
+      :show-scrollbar="false"
+    >
       <view v-if="order" class="content">
         <!-- 商品图 -->
         <view v-if="order.imageList && order.imageList.length" class="hero" @tap="preview(0)">
@@ -245,7 +251,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, getCurrentInstance, nextTick, ref, watch } from 'vue'
 import Empty from './Empty.vue'
 import VipBadge from './VipBadge.vue'
 import {
@@ -348,6 +354,48 @@ const mineHint = computed(() => {
   }
 })
 
+/**
+ * 小程序端必须给 scroll-view 一个「确定的高度」，否则它会按内容撑高：
+ * 撑高就把底部的「驳回 / 通过」顶出弹层（被 overflow:hidden 裁掉）；
+ * 写死 height:0 又会塌成 0 高、内容整块消失 —— 两种都试过，都不行。
+ *
+ * 这里不猜任何数值：.panel 是弹层里 flex 分配出来的真实高度（= 弹层 - 头部），
+ * .action-bar 也实测。滚动区 = 两者之差。
+ * 所以换机型、刘海屏、安全区、折叠屏都不需要改代码。
+ */
+const scrollH = ref(0)
+const scrollTop = ref(0)
+const scrollStyle = computed(() => (scrollH.value > 0 ? `height:${scrollH.value}px` : ''))
+
+/** 必须在 setup 同步阶段取一次。异步里再调 getCurrentInstance() 会拿到 null，
+ *  .in(undefined) 直接抛「Cannot read properties of undefined (reading '$scope')」。 */
+const vmInstance = getCurrentInstance()
+
+function measureScroll() {
+  // #ifdef MP-WEIXIN
+  const q = uni.createSelectorQuery().in(vmInstance?.proxy as never)
+  q.select('.panel').boundingClientRect()
+  q.select('.action-bar').boundingClientRect()
+  q.exec((res: unknown[]) => {
+    const panel = res && (res[0] as { height?: number } | null)
+    const bar = res && (res[1] as { height?: number } | null)
+    if (!panel || !panel.height || !bar) return
+    // 操作栏是 v-if="order"，还没渲染时高度是 0，不能当作「没有操作栏」算
+    const barH = bar.height || 0
+    const h = Math.round(panel.height - barH)
+    if (h > 60) {
+      scrollH.value = h
+      // 高度改小之前 scroll-view 是按内容撑的，滚动位置会被带到底部；
+      // 归零一次，保证每次打开都从标题开始看。
+      scrollTop.value = 1
+      nextTick(() => {
+        scrollTop.value = 0
+      })
+    }
+  })
+  // #endif
+}
+
 async function load() {
   if (!props.orderId) return
   await ensureLogin()
@@ -355,6 +403,9 @@ async function load() {
   order.value = res.order
   votes.value = res.votes || []
   comments.value = res.comments || []
+  // action-bar 是 v-if="order"，必须等它渲染出来才量得到高度
+  await nextTick()
+  measureScroll()
 }
 
 watch(
@@ -368,6 +419,17 @@ watch(
     load()
   },
   { immediate: true }
+)
+
+/**
+ * 操作栏的按钮组会随身份和状态变（发起人多一排「撤回 / 补说明 / 提前结束」），
+ * 高度一变滚动区就得跟着重算，否则偶尔会露出半截或空一条。
+ */
+watch(
+  () => [order.value?.mine, order.value?.favorited, order.value?.status],
+  () => {
+    nextTick(measureScroll)
+  }
 )
 
 async function doReport(targetType = '1', targetId?: number | string) {
@@ -576,18 +638,48 @@ defineExpose({ onMore, reload: load, wasChanged: () => dirty.value })
    而是按内容撑到很高，把下面的 action-bar 顶出 .os-sheet（overflow:hidden 一裁就没了）
    —— 表现就是「详情里看不到通过/驳回按钮」。
    必须同时给 flex-basis:0 和 height:0，它才会按剩余空间算高度。 */
+/* 详情面板铺满「标题栏以下」的整块区域：
+   弹层是固定高度的卡片（82vh），头部高度固定（--os-head-h，rpx 自适应），
+   用绝对定位把面板钉在这条线到卡片底部之间，高度就完全确定了 ——
+   不依赖 flex 压缩，也不写死像素，换机型/刘海屏/安全区都跟着走。 */
 .panel {
-  flex: 1 1 0;
-  height: 0;
-  min-height: 0;
+  position: absolute;
+  top: var(--os-head-h, 112rpx);
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
 }
 
 .panel-scroll {
+  position: relative;
+}
+
+/* H5 的 flex 是标准行为，靠 flex 撑开即可 */
+/* #ifdef H5 */
+.panel-scroll {
   flex: 1 1 0;
   height: 0;
   min-height: 0;
+}
+/* #endif */
+
+/* 小程序里高度由 measureScroll() 写成内联 style。
+   这里必须关掉 flex 伸缩，否则 flex-basis:0 会盖掉内联 height。 */
+/* #ifdef MP-WEIXIN */
+.panel-scroll {
+  flex: 0 0 auto;
+}
+/* #endif */
+
+/* uni-app 编译出的 scroll-view 内层是按内容撑高的，钉死在外层里才会跟着缩（H5 生效） */
+.panel-scroll :deep(.uni-scroll-view) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
 
 .content {

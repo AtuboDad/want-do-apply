@@ -197,8 +197,12 @@ function onMore() {
 }
 
 .os-sheet {
+  position: relative;
   width: 100%;
   height: 82vh;
+  /* 头部实际高度：16(padding-top) + 8(拖动条) + 12(间距) + 76(标题栏)。
+     详情面板用绝对定位从这条线开始，rpx 会随屏宽自适应，不用为机型写死像素。 */
+  --os-head-h: 112rpx;
   background: #f6f2e9;
   /* 四角都圆，像一张独立浮起的卡片 */
   border-radius: 44rpx;

@@ -59,7 +59,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { pageStyleWhen } from '../../utils/scroll-lock'
-import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
+import { onLoad, onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
 import OrderCard from '../../components/OrderCard.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
@@ -178,6 +178,15 @@ function preloadPublish() {
   }
   // #endif
 }
+
+/**
+ * 支持通过 /pages/index/index?id=xxx 直接打开某一单的详情。
+ * 用途：分享/推送落到具体一单；自动化验证时也能不依赖点击直接进详情。
+ */
+onLoad((opt) => {
+  const id = opt?.id
+  if (id) setTimeout(() => openSheet(id), 700)
+})
 
 onShow(() => {
   load(true)
