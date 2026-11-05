@@ -3,90 +3,107 @@
     <!-- 滚动区 -->
     <scroll-view class="panel-scroll" scroll-y :show-scrollbar="false">
       <view v-if="order" class="content">
-        <!-- 主卡片 -->
-        <view class="main-card">
-          <view class="author">
-            <image class="avatar" :src="fullUrl(order.userAvatar) || defaultAvatar" mode="aspectFill" />
-            <view class="grow">
-              <text class="name">{{ order.userNickName || '匿名审批员' }}</text>
-              <text class="time">{{ fromNow(order.createTime) }}</text>
-            </view>
-            <view
-              class="status"
-              :style="{ color: statusColor(order.status), background: statusColor(order.status) + '1A' }"
-            >
-              {{ statusText(order.status) }}
-            </view>
-          </view>
+        <!-- 商品图 -->
+        <view v-if="order.imageList && order.imageList.length" class="hero" @tap="preview(0)">
+          <image class="hero-img" :src="fullUrl(order.imageList[0])" mode="aspectFill" />
+          <view v-if="order.imageList.length > 1" class="hero-badge">共 {{ order.imageList.length }} 张</view>
+        </view>
 
+        <!-- 商品主信息 -->
+        <view class="card">
           <text class="title">{{ order.title }}</text>
           <view class="price-row">
             <text class="currency">¥</text>
             <text class="price">{{ money(order.price) }}</text>
+            <text v-if="order.isTop === '1'" class="tag-top">置顶</text>
           </view>
-
-          <view v-if="order.status === '0'" class="cd-row">
-            <text class="cd-label">距截止还有</text>
-            <text class="cd-value">{{ countdown(order.remainSeconds) }}</text>
-          </view>
-
-          <!-- 票数 -->
-          <view class="tally">
-            <view class="tally-bar">
-              <view class="bar-pass" :style="{ width: passPercent + '%' }" />
-              <view class="bar-reject" :style="{ width: 100 - passPercent + '%' }" />
-            </view>
-            <view class="tally-text">
-              <text class="t-pass">通过 {{ order.passCount || 0 }}</text>
-              <text class="t-mid">已批 {{ order.voteCount || 0 }} / {{ order.targetVotes || 10 }}</text>
-              <text class="t-reject">驳回 {{ order.rejectCount || 0 }}</text>
-            </view>
+          <view class="author">
+            <image class="avatar" :src="fullUrl(order.userAvatar) || defaultAvatar" mode="aspectFill" />
+            <text class="a-name">{{ order.userNickName || '匿名审批员' }}</text>
+            <text class="a-time">{{ fromNow(order.createTime) }}</text>
+            <text v-if="order.groupName" class="a-group">{{ order.groupName }}</text>
           </view>
         </view>
 
-        <!-- 理由 -->
-        <view class="block">
-          <text class="block-title">购买理由</text>
-          <text class="block-text">{{ order.reason }}</text>
-        </view>
+        <!-- 审批规则 -->
+        <view class="card rule-card">
+          <text class="rule-label">审批规则</text>
+          <text class="rule-main">多人审批 · {{ durationLabel(order.durationHours) }}后自动结束</text>
+          <view class="rule-meta">
+            <text class="rule-count">已表态 {{ order.voteCount || 0 }} 人</text>
+            <text class="rule-status" :style="{ color: statusColor(order.status) }">
+              {{ statusText(order.status) }}
+            </text>
+          </view>
+          <view class="rule-bar">
+            <view class="rb-pass" :style="{ width: passPercent + '%' }" />
+            <view class="rb-reject" :style="{ width: 100 - passPercent + '%' }" />
+          </view>
+          <view class="rule-foot">
+            <text class="rf-left">少数服从多数</text>
+            <text v-if="order.status === '0'" class="rf-cd">还剩 {{ countdown(order.remainSeconds) }}</text>
+          </view>
 
-        <view v-if="order.substitute" class="block">
-          <text class="block-title">有没有替代品</text>
-          <text class="block-text">{{ order.substitute }}</text>
-        </view>
-
-        <view v-if="order.imageList && order.imageList.length" class="block">
-          <text class="block-title">商品图</text>
-          <view class="img-grid">
-            <image
-              v-for="(img, i) in order.imageList"
-              :key="i"
-              class="img"
-              :src="fullUrl(img)"
-              mode="aspectFill"
-              @tap="preview(i)"
-            />
+          <view v-if="order.extraNote" class="note">
+            <text class="note-label">发起人补充</text>
+            <text class="note-text">{{ order.extraNote }}</text>
           </view>
         </view>
 
-        <!-- 批条 -->
-        <view class="block">
-          <view class="block-head">
-            <text class="block-title">网友批条</text>
+        <!-- 回应 -->
+        <view class="card">
+          <view class="card-head">
+            <text class="card-title">回应</text>
             <view class="sorter">
               <text :class="{ on: voteSort === 'hot' }" @tap="switchVoteSort('hot')">热门</text>
               <text class="sep">|</text>
               <text :class="{ on: voteSort === 'new' }" @tap="switchVoteSort('new')">最新</text>
             </view>
           </view>
-          <VoteCard v-for="v in votes" :key="v.id" :item="v" @like="onLike" />
-          <Empty v-if="votes.length === 0" text="还没有人批，快去摇人" emoji="✍️" />
+          <view class="tally-row">
+            <text class="t-pass">通过 {{ order.passCount || 0 }} 票</text>
+            <text class="t-reject">驳回 {{ order.rejectCount || 0 }} 票</text>
+          </view>
+
+          <view v-for="v in votes" :key="v.id" class="resp">
+            <view class="resp-head">
+              <text class="resp-result" :class="v.result === '1' ? 'pass' : 'reject'">
+                {{ v.result === '1' ? '通过' : '驳回' }}
+              </text>
+              <text class="resp-sep">·</text>
+              <text class="resp-nick">{{ v.userNickName || '匿名审批员' }}</text>
+              <view class="resp-more" @tap.stop="voteMore(v)">
+                <text>···</text>
+              </view>
+            </view>
+            <text class="resp-text">{{ v.reason }}</text>
+            <view class="resp-foot">
+              <text class="resp-time">{{ dateTime(v.createTime) }} · 北京时间</text>
+              <view class="flower" :class="{ on: v.liked }" @tap.stop="onLike(v.id)">
+                <text class="flower-ico">🌷</text>
+                <text>{{ v.liked ? '已送' : '送花' }}</text>
+                <text v-if="v.likeCount" class="flower-num">{{ v.likeCount }}</text>
+              </view>
+            </view>
+          </view>
+
+          <Empty v-if="votes.length === 0" text="还没人表态，快去摇人" emoji="🌿" />
         </view>
 
-        <!-- 评论 -->
-        <view class="block">
-          <view class="block-head">
-            <text class="block-title">讨论区 ({{ order.commentCount || 0 }})</text>
+        <!-- 商品详情 -->
+        <view class="card">
+          <text class="card-title">想买的理由</text>
+          <text class="para">{{ order.reason }}</text>
+          <view v-if="order.substitute" class="sub-block">
+            <text class="para-label">有没有替代品</text>
+            <text class="para">{{ order.substitute }}</text>
+          </view>
+        </view>
+
+        <!-- 讨论 -->
+        <view class="card">
+          <view class="card-head">
+            <text class="card-title">讨论 ({{ order.commentCount || 0 }})</text>
             <view class="c-add" @tap="openComment()">
               <text>写评论</text>
             </view>
@@ -122,16 +139,23 @@
 
     <!-- 底部操作 -->
     <view v-if="order" class="action-bar">
-      <view v-if="canVote" class="vote-actions">
+      <!-- 发起人：撤回 / 补充说明 / 提前结束 -->
+      <view v-if="order.mine && order.status === '0'" class="row-3">
+        <button class="btn ghost" @tap="cancelMine">撤回审批</button>
+        <button class="btn dark" @tap="openNote">补充说明</button>
+        <button class="btn warm" @tap="finishEarly">提前结束</button>
+      </view>
+      <view v-else-if="order.mine" class="row-mine">
+        <text class="hint">{{ mineHint }}</text>
+        <button class="btn ghost small" @tap="onMore">管理</button>
+      </view>
+      <!-- 其他人：批一下 -->
+      <view v-else-if="canVote" class="row-2">
         <button class="btn reject" @tap="openVote('2')">驳回</button>
         <button class="btn pass" @tap="openVote('1')">通过</button>
       </view>
-      <view v-else-if="order.mine" class="mine-actions">
-        <text class="hint">{{ mineHint }}</text>
-        <button v-if="order.status === '0'" class="btn ghost" @tap="cancelMine">撤销</button>
-      </view>
       <view v-else class="voted-tip">
-        <text>{{ order.myVoted ? '你已经批过这单了' : '这单已经结案' }}</text>
+        <text>{{ order.myVoted ? '你已经批过这单了，等结果吧' : '这单已经结案' }}</text>
       </view>
     </view>
 
@@ -158,6 +182,26 @@
       </view>
     </view>
 
+    <!-- 补充说明 -->
+    <view v-if="noteVisible" class="mask" @tap="noteVisible = false">
+      <view class="sheet" @tap.stop>
+        <view class="sheet-head">
+          <text class="sheet-title">补充说明</text>
+          <text class="sheet-close" @tap="noteVisible = false">✕</text>
+        </view>
+        <text class="sheet-tip">写清背景，帮大家更好判断（会显示在审批规则下面）</text>
+        <textarea
+          v-model="noteText"
+          class="sheet-input"
+          placeholder="例：旧的那把是薄膜键盘，手感真的不行…"
+          maxlength="500"
+          :focus="true"
+          auto-height
+        />
+        <button class="submit pass" @tap="saveNote">保存说明</button>
+      </view>
+    </view>
+
     <!-- 评论输入 -->
     <view v-if="commentVisible" class="mask" @tap="closeComment">
       <view class="sheet" @tap.stop>
@@ -181,20 +225,33 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import VoteCard from './VoteCard.vue'
 import Empty from './Empty.vue'
-import { getDetail, cancelOrder, toggleFavorite, removeOrder } from '../api/order'
+import {
+  getDetail,
+  cancelOrder,
+  toggleFavorite,
+  removeOrder,
+  updateNote,
+  finishEarly as finishEarlyApi
+} from '../api/order'
 import { submitVote, likeVote, addComment, getComments } from '../api/vote'
 import { report } from '../api/group'
 import { fullUrl } from '../utils/request'
-import { fromNow, money, countdown, statusText, statusColor } from '../utils/format'
+import {
+  fromNow,
+  money,
+  countdown,
+  statusText,
+  statusColor,
+  dateTime,
+  durationLabel
+} from '../utils/format'
 import { ensureLogin } from '../utils/auth'
 import type { OrderItem, VoteItem, CommentItem } from '../api/types'
 
 const props = defineProps<{ orderId: number }>()
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'more'): void
 }>()
 
 const defaultAvatar =
@@ -208,6 +265,8 @@ const voteSort = ref<'hot' | 'new'>('hot')
 const voteVisible = ref(false)
 const voteResult = ref('1')
 const voteReason = ref('')
+const noteVisible = ref(false)
+const noteText = ref('')
 const commentVisible = ref(false)
 const commentText = ref('')
 const replyTarget = ref<CommentItem | null>(null)
@@ -217,7 +276,7 @@ const quickWords = ['性价比不高', '已有类似款', '真的需要吗', '�
 const passPercent = computed(() => {
   const p = order.value?.passCount || 0
   const r = order.value?.rejectCount || 0
-  if (p + r === 0) return 50
+  if (p + r === 0) return 0
   return Math.round((p / (p + r)) * 100)
 })
 
@@ -229,8 +288,14 @@ const canVote = computed(() => {
 const mineHint = computed(() => {
   const o = order.value
   if (!o) return ''
-  if (o.status === '0') return '等待网友审判中…'
-  return ''
+  switch (o.status) {
+    case '0': return '大家还在批，到点自动出结果'
+    case '1': return '通过了，这钱花得理直气壮'
+    case '2': return '被驳回了，省下一笔'
+    case '3': return '这单已撤回'
+    case '4': return '流拍了，没人来得及表态'
+    default: return ''
+  }
 })
 
 async function load() {
@@ -255,13 +320,21 @@ watch(
   { immediate: true }
 )
 
-async function doReport() {
+async function doReport(targetType = '1', targetId?: number) {
   try {
-    await report({ targetType: '1', targetId: props.orderId, reasonType: 'other', content: '用户举报' })
+    await report({ targetType, targetId: targetId || props.orderId, reasonType: 'other', content: '用户举报' })
     uni.showToast({ title: '已提交举报', icon: 'none' })
   } catch (e) {
     // ignore
   }
+}
+
+/** 批条右侧「···」 */
+function voteMore(v: VoteItem) {
+  uni.showActionSheet({
+    itemList: ['举报这条批条'],
+    success: () => doReport('2', v.id)
+  })
 }
 
 function openVote(result: string) {
@@ -285,7 +358,7 @@ async function doVote() {
     reason: voteReason.value.trim()
   })
   voteVisible.value = false
-  uni.showToast({ title: settled ? '这单结案了' : '批完啦', icon: 'none' })
+  uni.showToast({ title: settled ? '这单结案了' : '批完啦，等大家投票', icon: 'none' })
   await load()
 }
 
@@ -304,6 +377,68 @@ async function switchVoteSort(s: 'hot' | 'new') {
   const res = await getDetail(props.orderId)
   votes.value = res.votes || []
 }
+
+// ---------------- 发起人操作 ----------------
+
+function cancelMine() {
+  uni.showModal({
+    title: '撤回这单？',
+    content: '撤回后不再接受审批，也不会出结果',
+    success: async (res) => {
+      if (res.confirm) {
+        await cancelOrder(props.orderId)
+        uni.showToast({ title: '已撤回', icon: 'none' })
+        await load()
+      }
+    }
+  })
+}
+
+function openNote() {
+  noteText.value = order.value?.extraNote || ''
+  noteVisible.value = true
+}
+
+async function saveNote() {
+  const text = noteText.value.trim()
+  if (!text) {
+    uni.showToast({ title: '写点什么吧', icon: 'none' })
+    return
+  }
+  await updateNote(props.orderId, text)
+  noteVisible.value = false
+  uni.showToast({ title: '补充好了', icon: 'none' })
+  await load()
+}
+
+function finishEarly() {
+  const o = order.value
+  if (!o) return
+  const p = o.passCount || 0
+  const r = o.rejectCount || 0
+  uni.showModal({
+    title: '提前结束？',
+    content:
+      p + r === 0
+        ? '还没有人表态，现在结束会算流拍'
+        : `当前通过 ${p} 票、驳回 ${r} 票，按少数服从多数直接出结果，结束后不能再改`,
+    confirmText: '结束',
+    confirmColor: '#C0503F',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        const status = await finishEarlyApi(props.orderId)
+        const tip = status === '1' ? '通过了' : status === '2' ? '被驳回了' : '流拍了'
+        uni.showToast({ title: tip, icon: 'none' })
+      } catch (e) {
+        // 错误已提示
+      }
+      await load()
+    }
+  })
+}
+
+// ---------------- 评论 ----------------
 
 function openComment(target?: CommentItem) {
   replyTarget.value = target || null
@@ -338,20 +473,6 @@ async function doComment() {
   uni.showToast({ title: '发布成功', icon: 'none' })
 }
 
-function cancelMine() {
-  uni.showModal({
-    title: '撤销这单？',
-    content: '撤销后不再接受审批',
-    success: async (res) => {
-      if (res.confirm) {
-        await cancelOrder(props.orderId)
-        uni.showToast({ title: '已撤销', icon: 'none' })
-        await load()
-      }
-    }
-  })
-}
-
 function preview(i: number) {
   const urls = (order.value?.imageList || []).map((u) => fullUrl(u))
   uni.previewImage({ urls, current: i })
@@ -359,16 +480,16 @@ function preview(i: number) {
 
 /** 供弹层头部「···」调用 */
 async function onMore() {
-  const items = ['收藏 / 取消收藏', '举报这个审批']
+  const items = [order.value?.favorited ? '取消围观' : '围观这单', '举报这个审批']
   if (order.value?.mine) items.push('删除这单')
   uni.showActionSheet({
     itemList: items,
     success: async (res) => {
       if (res.tapIndex === 0) {
         const fav = await toggleFavorite(props.orderId)
-        uni.showToast({ title: fav ? '已收藏' : '已取消收藏', icon: 'none' })
+        uni.showToast({ title: fav ? '开始围观' : '取消围观', icon: 'none' })
       } else if (res.tapIndex === 1) {
-        doReport()
+        doReport('1')
       } else if (res.tapIndex === 2) {
         await removeOrder(props.orderId)
         uni.showToast({ title: '已删除', icon: 'none' })
@@ -405,52 +526,56 @@ defineExpose({ onMore, reload: load })
   color: #9aa0a6;
 }
 
-.main-card {
-  background: #fff;
-  border-radius: 28rpx;
-  padding: 32rpx;
+/* ---------- 商品图 ---------- */
+.hero {
+  position: relative;
+  margin-bottom: 18rpx;
 }
 
-.author {
+.hero-img {
+  width: 100%;
+  height: 340rpx;
+  border-radius: 24rpx;
+  background: #ececf0;
+}
+
+.hero-badge {
+  position: absolute;
+  right: 18rpx;
+  bottom: 18rpx;
+  font-size: 20rpx;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
+}
+
+/* ---------- 通用卡片 ---------- */
+.card {
+  background: #fff;
+  border-radius: 26rpx;
+  padding: 30rpx 28rpx;
+  margin-bottom: 18rpx;
+}
+
+.card-head {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  justify-content: space-between;
 }
 
-.avatar {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
-  background: #f5f5f7;
-}
-
-.name {
-  font-size: 27rpx;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.time {
-  display: block;
-  font-size: 22rpx;
-  color: #9aa0a6;
-  margin-top: 2rpx;
-}
-
-.status {
-  font-size: 22rpx;
-  padding: 4rpx 18rpx;
-  border-radius: 999rpx;
-  font-weight: 600;
+.card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f1f1f;
 }
 
 .title {
   display: block;
-  margin-top: 26rpx;
-  font-size: 38rpx;
+  font-size: 36rpx;
   font-weight: 700;
-  line-height: 1.4;
-  color: #1a1a1a;
+  line-height: 1.45;
+  color: #1f1f1f;
 }
 
 .price-row {
@@ -461,111 +586,155 @@ defineExpose({ onMore, reload: load })
 }
 
 .currency {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #ff6b35;
   font-weight: 700;
 }
 
 .price {
-  font-size: 60rpx;
+  font-size: 54rpx;
   color: #ff6b35;
   font-weight: 800;
   line-height: 1.1;
 }
 
-.cd-row {
-  margin-top: 12rpx;
+.tag-top {
+  font-size: 19rpx;
+  color: #fff;
+  background: #ff6b35;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-left: 12rpx;
+  align-self: center;
+}
+
+.author {
   display: flex;
   align-items: center;
-  gap: 10rpx;
-}
-
-.cd-label {
-  font-size: 23rpx;
-  color: #9aa0a6;
-}
-
-.cd-value {
-  font-size: 23rpx;
-  color: #ff6b35;
-  font-weight: 600;
-}
-
-.tally {
-  margin-top: 28rpx;
-}
-
-.tally-bar {
-  height: 12rpx;
-  border-radius: 999rpx;
-  background: #f0f0f2;
-  overflow: hidden;
-  display: flex;
-}
-
-.bar-pass {
-  background: #22c55e;
-  height: 100%;
-}
-
-.bar-reject {
-  background: #ef4444;
-  height: 100%;
-}
-
-.tally-text {
-  margin-top: 12rpx;
-  display: flex;
-  justify-content: space-between;
-  font-size: 22rpx;
-}
-
-.t-pass {
-  color: #22c55e;
-  font-weight: 600;
-}
-
-.t-mid {
-  color: #9aa0a6;
-}
-
-.t-reject {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-.block {
+  gap: 12rpx;
   margin-top: 20rpx;
-  background: #fff;
-  border-radius: 28rpx;
-  padding: 30rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #f4f4f6;
 }
 
-.block-head {
+.avatar {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: #f5f5f7;
+}
+
+.a-name {
+  font-size: 24rpx;
+  color: #4b4b4b;
+  font-weight: 600;
+}
+
+.a-time {
+  font-size: 22rpx;
+  color: #a8adb5;
+}
+
+.a-group {
+  margin-left: auto;
+  font-size: 20rpx;
+  color: #8a8f98;
+  background: #f4f4f6;
+  border-radius: 999rpx;
+  padding: 4rpx 16rpx;
+}
+
+/* ---------- 审批规则 ---------- */
+.rule-card {
+  background: #fffaf3;
+}
+
+.rule-label {
+  display: block;
+  font-size: 22rpx;
+  color: #a98d63;
+  letter-spacing: 1rpx;
+}
+
+.rule-main {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2b2b2b;
+}
+
+.rule-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20rpx;
+  margin-top: 20rpx;
 }
 
-.block-title {
-  font-size: 28rpx;
-  font-weight: 700;
-  color: #1a1a1a;
+.rule-count {
+  font-size: 26rpx;
+  color: #8a6d3b;
 }
 
-.block-head .block-title {
-  margin-bottom: 0;
+.rule-status {
+  font-size: 26rpx;
+  font-weight: 600;
 }
 
-.block-text {
-  display: block;
+.rule-bar {
+  display: flex;
+  height: 14rpx;
+  border-radius: 999rpx;
+  overflow: hidden;
+  background: #f0e6d6;
+  margin-top: 16rpx;
+}
+
+.rb-pass {
+  background: #34b06a;
+  height: 100%;
+}
+
+.rb-reject {
+  background: #d8685a;
+  height: 100%;
+}
+
+.rule-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 14rpx;
-  font-size: 28rpx;
-  color: #333;
-  line-height: 1.75;
+  font-size: 22rpx;
+  color: #b0a08a;
 }
 
+.rf-cd {
+  color: #c08a3e;
+  font-weight: 600;
+}
+
+.note {
+  margin-top: 22rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx dashed #ecdcc4;
+}
+
+.note-label {
+  display: block;
+  font-size: 22rpx;
+  color: #a98d63;
+}
+
+.note-text {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #4a4a4a;
+}
+
+/* ---------- 回应 ---------- */
 .sorter {
   display: flex;
   align-items: center;
@@ -583,6 +752,145 @@ defineExpose({ onMore, reload: load })
   color: #e5e5e8;
 }
 
+.tally-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #f4f4f6;
+}
+
+.t-pass {
+  font-size: 26rpx;
+  color: #2f9e63;
+  font-weight: 600;
+}
+
+.t-reject {
+  font-size: 26rpx;
+  color: #c65a4c;
+  font-weight: 600;
+}
+
+.resp {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f6f6f8;
+}
+
+.resp:last-child {
+  border-bottom: none;
+  padding-bottom: 4rpx;
+}
+
+.resp-head {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.resp-result {
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.resp-result.pass {
+  color: #2f9e63;
+}
+
+.resp-result.reject {
+  color: #c65a4c;
+}
+
+.resp-sep {
+  color: #c9ccd2;
+  font-size: 24rpx;
+}
+
+.resp-nick {
+  font-size: 25rpx;
+  color: #6b6b6b;
+  max-width: 380rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.resp-more {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: #b8bcc2;
+  padding: 0 8rpx;
+  letter-spacing: 2rpx;
+}
+
+.resp-text {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  line-height: 1.65;
+  color: #2b2b2b;
+}
+
+.resp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14rpx;
+}
+
+.resp-time {
+  font-size: 21rpx;
+  color: #b0b4bb;
+}
+
+.flower {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 22rpx;
+  color: #a8adb5;
+  background: #fafafa;
+  border-radius: 999rpx;
+  padding: 6rpx 18rpx;
+}
+
+.flower.on {
+  color: #d9735f;
+  background: #fff2ee;
+}
+
+.flower-ico {
+  font-size: 22rpx;
+}
+
+.flower-num {
+  font-weight: 600;
+}
+
+/* ---------- 商品详情 ---------- */
+.para {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 27rpx;
+  line-height: 1.75;
+  color: #3d3d3d;
+}
+
+.para-label {
+  display: block;
+  margin-top: 22rpx;
+  font-size: 24rpx;
+  color: #8a8f98;
+}
+
+.sub-block {
+  margin-top: 4rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #f4f4f6;
+}
+
+/* ---------- 评论 ---------- */
 .c-add {
   font-size: 23rpx;
   color: #ff6b35;
@@ -591,25 +899,11 @@ defineExpose({ onMore, reload: load })
   padding: 6rpx 20rpx;
 }
 
-.img-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  margin-top: 16rpx;
-}
-
-.img {
-  width: 200rpx;
-  height: 200rpx;
-  border-radius: 16rpx;
-  background: #f5f5f7;
-}
-
 .comment {
   display: flex;
   gap: 16rpx;
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #f5f5f7;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #f6f6f8;
 }
 
 .comment:last-child {
@@ -617,8 +911,8 @@ defineExpose({ onMore, reload: load })
 }
 
 .c-avatar {
-  width: 60rpx;
-  height: 60rpx;
+  width: 58rpx;
+  height: 58rpx;
   border-radius: 50%;
   background: #f5f5f7;
   flex-shrink: 0;
@@ -633,7 +927,7 @@ defineExpose({ onMore, reload: load })
 .c-name {
   font-size: 24rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1f1f1f;
 }
 
 .c-time {
@@ -681,36 +975,80 @@ defineExpose({ onMore, reload: load })
   height: 40rpx;
 }
 
+/* ---------- 底部操作 ---------- */
 .action-bar {
   background: #fff;
-  /* 弹层已整体悬空，底部安全区由外层负责，这里只留视觉间距 */
-  padding: 20rpx 28rpx 24rpx;
+  padding: 18rpx 24rpx 22rpx;
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
 }
 
-.vote-actions {
+.row-3 {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.row-2 {
   display: flex;
   gap: 20rpx;
 }
 
+.row-mine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .btn {
   flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
+  height: 84rpx;
+  line-height: 84rpx;
   border-radius: 999rpx;
-  font-size: 30rpx;
-  font-weight: 700;
-  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
   text-align: center;
   padding: 0;
   margin: 0;
+  border: none;
+}
+
+.btn::after {
+  border: none;
+}
+
+/* 撤回：白底描边 */
+.btn.ghost {
+  background: #fff;
+  color: #5a5a5a;
+  border: 1rpx solid #e6e6ea;
+  font-weight: 500;
+}
+
+.btn.ghost.small {
+  flex: none;
+  width: 150rpx;
+  height: 66rpx;
+  line-height: 66rpx;
+  font-size: 25rpx;
+}
+
+/* 补充说明：深墨绿 */
+.btn.dark {
+  background: #35463c;
+  color: #fff;
+}
+
+/* 提前结束：砖红 */
+.btn.warm {
+  background: #bd5343;
+  color: #fff;
 }
 
 .btn.reject {
-  background: #fef2f2;
-  color: #ef4444;
-  border: 1rpx solid #fecaca;
+  background: #fdf1ef;
+  color: #c65a4c;
+  border: 1rpx solid #f2d5cf;
 }
 
 .btn.pass {
@@ -718,34 +1056,19 @@ defineExpose({ onMore, reload: load })
   color: #fff;
 }
 
-.btn.ghost {
-  flex: none;
-  width: 200rpx;
-  height: 72rpx;
-  line-height: 72rpx;
-  font-size: 26rpx;
-  background: #f5f5f7;
-  color: #6b7280;
-}
-
-.mine-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .hint {
   font-size: 25rpx;
-  color: #9aa0a6;
+  color: #8a8f98;
 }
 
 .voted-tip {
   text-align: center;
   font-size: 26rpx;
   color: #9aa0a6;
-  padding: 16rpx 0;
+  padding: 18rpx 0;
 }
 
+/* ---------- 内层弹窗 ---------- */
 .mask {
   position: fixed;
   top: 0;

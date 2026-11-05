@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -74,7 +76,11 @@ public class AppFileController {
         try {
             Files.createDirectories(dir);
             Path target = dir.resolve(fileName);
-            file.transferTo(target.toFile());
+            // 不用 MultipartFile#transferTo：部分容器实现会用临时文件 rename，
+            // 跨分区或临时文件已被清理时会静默失败，落盘直接流式复制最稳
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             log.error("保存上传文件失败", e);
             throw new ServiceException("上传失败，请稍后再试");

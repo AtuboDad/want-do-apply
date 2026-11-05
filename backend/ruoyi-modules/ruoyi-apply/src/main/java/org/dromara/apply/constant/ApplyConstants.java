@@ -59,10 +59,14 @@ public interface ApplyConstants {
     int DAILY_APPLY_LIMIT = 10;
     /** 每天最多批阅数 */
     int DAILY_VOTE_LIMIT = 200;
-    /** 审批单默认结算票数 */
-    int DEFAULT_TARGET_VOTES = 10;
-    /** 审批单有效期(小时) */
-    int ORDER_EXPIRE_HOURS = 24;
+    /** 审批时长默认值(小时) */
+    int DEFAULT_DURATION_HOURS = 24;
+    /** 审批时长下限(小时) */
+    int MIN_DURATION_HOURS = 1;
+    /** 审批时长上限(小时) */
+    int MAX_DURATION_HOURS = 72;
+    /** 补充说明最大长度 */
+    int EXTRA_NOTE_MAX_LENGTH = 500;
 
     // ---------------- Redis key ----------------
     String KEY_WX_TOKEN = "apply:wx:token:";

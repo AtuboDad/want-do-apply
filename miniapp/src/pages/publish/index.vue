@@ -86,11 +86,27 @@
         </view>
       </view>
 
+      <view class="field">
+        <text class="label">审批多久</text>
+        <text class="sub-label">到点后按「少数服从多数」出结果，期间谁都能批</text>
+        <view class="chips">
+          <text
+            v-for="d in DURATIONS"
+            :key="d.value"
+            class="chip"
+            :class="{ on: form.durationHours === d.value }"
+            @tap="form.durationHours = d.value"
+          >
+            {{ d.label }}
+          </text>
+        </view>
+      </view>
+
       <button class="submit" :disabled="submitting" @tap="submit">
         {{ submitting ? '提交中…' : '发到广场' }}
       </button>
 
-      <text class="tip">提交后 24 小时内有效，攒够 10 条批条自动结案</text>
+      <text class="tip">发出去谁都能审，{{ durationLabel(form.durationHours) }}后自动结案；中途还能补一句说明</text>
     </view>
   </view>
 </template>
@@ -101,10 +117,19 @@ import { onShow } from '@dcloudio/uni-app'
 import { createOrder } from '../../api/order'
 import { getMyGroups, joinGroupByCode } from '../../api/group'
 import { uploadFile } from '../../utils/request'
-import { CATEGORIES } from '../../utils/format'
+import { CATEGORIES, durationLabel } from '../../utils/format'
 import { ensureLogin } from '../../utils/auth'
 import { setPendingOpenOrder } from '../../utils/order-sheet'
 import type { GroupItem } from '../../api/types'
+
+/** 审批时长候选（小时） */
+const DURATIONS = [
+  { value: 1, label: '1 小时' },
+  { value: 2, label: '2 小时' },
+  { value: 6, label: '6 小时' },
+  { value: 12, label: '12 小时' },
+  { value: 24, label: '1 天' }
+]
 
 const statusBarHeight = ref(0)
 // #ifdef MP-WEIXIN
@@ -117,6 +142,7 @@ const form = ref({
   substitute: '',
   category: 'other',
   visibility: '0',
+  durationHours: 2,
   groupId: null as number | null
 })
 
@@ -213,6 +239,7 @@ async function submit() {
       images: images.value.join(','),
       category: form.value.category,
       visibility: form.value.visibility,
+      durationHours: form.value.durationHours,
       groupId: form.value.groupId
     })
     reset()
@@ -230,7 +257,7 @@ async function submit() {
 }
 
 function reset() {
-  form.value = { title: '', reason: '', substitute: '', category: 'other', visibility: '0', groupId: null }
+  form.value = { title: '', reason: '', substitute: '', category: 'other', visibility: '0', durationHours: 2, groupId: null }
   priceText.value = ''
   images.value = []
 }
@@ -290,6 +317,13 @@ onShow(() => {
 
 .req {
   color: #ff6b35;
+}
+
+.sub-label {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #9aa0a6;
 }
 
 .input {

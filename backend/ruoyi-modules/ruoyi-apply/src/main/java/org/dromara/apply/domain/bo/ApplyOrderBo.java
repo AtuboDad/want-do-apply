@@ -3,6 +3,8 @@ package org.dromara.apply.domain.bo;
 import io.github.linpeilie.annotations.AutoMapper;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -55,6 +57,11 @@ public class ApplyOrderBo implements Serializable {
 
     /** 可见范围（0公开 1群内） */
     private String visibility;
+
+    /** 审批时长（小时），1-72，默认 24 */
+    @Min(value = 1, message = "审批时长至少 1 小时")
+    @Max(value = 72, message = "审批时长最多 72 小时")
+    private Integer durationHours;
 
     /** 审批群ID */
     private Long groupId;

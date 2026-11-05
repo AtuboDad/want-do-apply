@@ -1,10 +1,12 @@
 package org.dromara.apply.controller.app;
 
 import lombok.RequiredArgsConstructor;
+import org.dromara.apply.domain.bo.ApplyNoteBo;
 import org.dromara.apply.domain.bo.ApplyOrderBo;
 import org.dromara.apply.domain.vo.AppOrderDetailVo;
 import org.dromara.apply.domain.vo.ApplyOrderVo;
 import org.dromara.apply.service.ApplyOrderService;
+import org.dromara.apply.service.ApplyVoteService;
 import org.dromara.common.core.domain.PageResult;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AppOrderController {
 
     private final ApplyOrderService orderService;
+    private final ApplyVoteService voteService;
 
     /**
      * 广场列表
@@ -67,6 +70,26 @@ public class AppOrderController {
     public R<Void> cancel(@PathVariable Long id) {
         orderService.cancel(id);
         return R.ok();
+    }
+
+    /**
+     * 补充说明（发起人）
+     */
+    @PostMapping("/{id}/note")
+    public R<Void> note(@PathVariable Long id, @Validated @RequestBody ApplyNoteBo bo) {
+        orderService.updateNote(id, bo.getNote());
+        return R.ok();
+    }
+
+    /**
+     * 提前结束（发起人），按当前票数立即结算
+     * <p>
+     * 注意：这里必须用 ok(msg, data) 重载，直接用 ok(status) 会命中 ok(String msg)，
+     * 结果状态会被当成提示语，data 变成 null。
+     */
+    @PostMapping("/{id}/finish")
+    public R<String> finish(@PathVariable Long id) {
+        return R.ok("操作成功", voteService.finishEarly(id));
     }
 
     /**

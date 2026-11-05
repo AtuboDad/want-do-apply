@@ -43,10 +43,27 @@ export function countdown(seconds?: number): string {
   return `${s} 秒`
 }
 
+/** 绝对时间：2026-10-17 18:54 */
+export function dateTime(time?: string): string {
+  if (!time) return ''
+  const t = parseTime(time)
+  if (!t) return ''
+  const d = new Date(t)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/** 审批时长文案：2 小时 / 1 天 */
+export function durationLabel(hours?: number): string {
+  const h = hours && hours > 0 ? hours : 24
+  if (h % 24 === 0 && h >= 24) return `${h / 24} 天`
+  return `${h} 小时`
+}
+
 /** 审批状态文案 */
 export function statusText(status?: string): string {
   switch (status) {
-    case '0': return '待审批'
+    case '0': return '审批中'
     case '1': return '已通过'
     case '2': return '已驳回'
     case '3': return '已撤销'

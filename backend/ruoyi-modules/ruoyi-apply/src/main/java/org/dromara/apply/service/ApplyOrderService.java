@@ -98,20 +98,31 @@ public class ApplyOrderService {
         }
 
         ApplyOrder order = MapstructUtils.convert(bo, ApplyOrder.class);
+
+        // 审批时长由发起人自由设置，到点后按「少数服从多数」结算，不再按票数提前结案
+        int hours = bo.getDurationHours() == null
+            ? ApplyConstants.DEFAULT_DURATION_HOURS : bo.getDurationHours();
+        if (hours < ApplyConstants.MIN_DURATION_HOURS || hours > ApplyConstants.MAX_DURATION_HOURS) {
+            throw new ServiceException("审批时长要在 " + ApplyConstants.MIN_DURATION_HOURS
+                + "-" + ApplyConstants.MAX_DURATION_HOURS + " 小时之间");
+        }
+
         order.setUserId(userId);
         order.setGroupId(groupId);
         order.setVisibility(visibility);
         order.setCategory(StringUtils.blankToDefault(bo.getCategory(), "other"));
         order.setImages(StringUtils.blankToDefault(bo.getImages(), ""));
         order.setSubstitute(StringUtils.blankToDefault(bo.getSubstitute(), ""));
+        order.setExtraNote("");
+        order.setDurationHours(hours);
         order.setStatus(ApplyConstants.ORDER_PENDING);
         order.setPassCount(0);
         order.setRejectCount(0);
         order.setVoteCount(0);
-        order.setTargetVotes(ApplyConstants.DEFAULT_TARGET_VOTES);
+        order.setTargetVotes(0);
         order.setCommentCount(0);
         order.setHotScore(0);
-        order.setExpireTime(LocalDateTime.now().plusHours(ApplyConstants.ORDER_EXPIRE_HOURS));
+        order.setExpireTime(LocalDateTime.now().plusHours(hours));
         order.setAuditStatus(ApplyConstants.AUDIT_PASS);
         order.setAuditRemark("");
         order.setIsTop("0");
@@ -225,6 +236,33 @@ public class ApplyOrderService {
         orderMapper.update(null, Wrappers.<ApplyOrder>lambdaUpdate()
             .set(ApplyOrder::getStatus, ApplyConstants.ORDER_CANCELED)
             .set(ApplyOrder::getSettleTime, LocalDateTime.now())
+            .eq(ApplyOrder::getId, id));
+    }
+
+    /**
+     * 追加 / 修改补充说明（仅发起人，且还在审批中）
+     *
+     * @param id   审批单ID
+     * @param note 补充说明
+     */
+    public void updateNote(Long id, String note) {
+        Long userId = AppLoginHelper.requireUserId();
+        ApplyOrder order = orderMapper.selectById(id);
+        if (order == null || !userId.equals(order.getUserId())) {
+            throw new ServiceException("审批单不存在");
+        }
+        if (!ApplyConstants.ORDER_PENDING.equals(order.getStatus())) {
+            throw new ServiceException("这单已经结案了，写不了补充说明");
+        }
+        String text = note == null ? "" : note.trim();
+        if (text.isEmpty()) {
+            throw new ServiceException("补充说明不能为空");
+        }
+        if (text.length() > ApplyConstants.EXTRA_NOTE_MAX_LENGTH) {
+            throw new ServiceException("补充说明最多 " + ApplyConstants.EXTRA_NOTE_MAX_LENGTH + " 字");
+        }
+        orderMapper.update(null, Wrappers.<ApplyOrder>lambdaUpdate()
+            .set(ApplyOrder::getExtraNote, text)
             .eq(ApplyOrder::getId, id));
     }
 

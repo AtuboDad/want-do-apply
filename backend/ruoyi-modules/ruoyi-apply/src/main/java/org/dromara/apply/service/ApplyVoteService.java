@@ -205,7 +205,7 @@ public class ApplyVoteService {
     // ==================== 内部 ====================
 
     /**
-     * 达到票数或已过期时结算
+     * 到点结算（投票时顺带检查一次）
      *
      * @param orderId 审批单ID
      * @return 是否完成结算
@@ -216,26 +216,66 @@ public class ApplyVoteService {
         if (order == null || !ApplyConstants.ORDER_PENDING.equals(order.getStatus())) {
             return false;
         }
-        boolean reached = order.getVoteCount() != null && order.getVoteCount() >= order.getTargetVotes();
+        // 只在「到点」时结算：审批时长内由大家自由表态，票数多少都不提前结案
         boolean expired = order.getExpireTime() != null && order.getExpireTime().isBefore(LocalDateTime.now());
-        if (!reached && !expired) {
+        if (!expired) {
+            return false;
+        }
+        return settle(orderId, false);
+    }
+
+    /**
+     * 发起人提前结束：按当前票数立即走一遍「少数服从多数」
+     *
+     * @param orderId 审批单ID
+     * @return 结算后的状态
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public String finishEarly(Long orderId) {
+        Long userId = AppLoginHelper.requireUserId();
+        ApplyOrder order = orderMapper.selectById(orderId);
+        if (order == null || !userId.equals(order.getUserId())) {
+            throw new ServiceException("审批单不存在");
+        }
+        if (!ApplyConstants.ORDER_PENDING.equals(order.getStatus())) {
+            throw new ServiceException("这单已经结案了");
+        }
+        if (order.getVoteCount() == null || order.getVoteCount() == 0) {
+            throw new ServiceException("还没有人表态，结束就算流拍了");
+        }
+        settle(orderId, true);
+        ApplyOrder after = orderMapper.selectById(orderId);
+        return after == null ? null : after.getStatus();
+    }
+
+    /**
+     * 结算：少数服从多数，平票按驳回处理（保守，向"省钱"一侧倾斜）
+     *
+     * @param orderId 审批单ID
+     * @param early   是否为发起人提前结束
+     * @return 是否完成结算
+     */
+    private boolean settle(Long orderId, boolean early) {
+        ApplyOrder order = orderMapper.selectById(orderId);
+        if (order == null || !ApplyConstants.ORDER_PENDING.equals(order.getStatus())) {
             return false;
         }
 
+        String when = early ? "（发起人提前结束）" : "";
         String status;
         String title;
         String content;
         if (order.getVoteCount() == null || order.getVoteCount() == 0) {
-            // 无人批阅的过期单：直接过期，不算驳回
+            // 无人表态：不算驳回，直接算流拍
             status = ApplyConstants.ORDER_EXPIRED;
-            title = "审批已过期";
-            content = "「" + truncate(order.getTitle(), 30) + "」没人来得及审批，已自动过期";
+            title = "审批流拍了";
+            content = "「" + truncate(order.getTitle(), 30) + "」" + when + "没人来得及表态，已自动关闭";
         } else {
             boolean passed = order.getPassCount() != null && order.getRejectCount() != null
                 && order.getPassCount() > order.getRejectCount();
             status = passed ? ApplyConstants.ORDER_PASSED : ApplyConstants.ORDER_REJECTED;
             title = passed ? "审批通过：买吧" : "审批驳回：省下钱了";
-            content = "「" + truncate(order.getTitle(), 30) + "」"
+            content = "「" + truncate(order.getTitle(), 30) + "」" + when
                 + (passed ? " 通过了，" : " 被驳回了，")
                 + " 通过 " + order.getPassCount() + " / 驳回 " + order.getRejectCount();
         }

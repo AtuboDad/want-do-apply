@@ -20,11 +20,11 @@
       <view class="stats">
         <view class="stat">
           <text class="num">{{ profile?.applyTotal || 0 }}</text>
-          <text class="label">发起</text>
+          <text class="label">提交</text>
         </view>
         <view class="stat">
           <text class="num">{{ profile?.voteTotal || 0 }}</text>
-          <text class="label">批过</text>
+          <text class="label">处理</text>
         </view>
         <view class="stat">
           <text class="num">{{ profile?.adoptedTotal || 0 }}</text>
@@ -99,13 +99,15 @@ const statusBarHeight = ref(0)
 statusBarHeight.value = uni.getSystemInfoSync().statusBarHeight || 20
 // #endif
 
-const tabs = [
-  { key: 'apply', label: '我发起的' },
-  { key: 'vote', label: '我批过的' },
-  { key: 'favorite', label: '收藏' }
+type MineTab = 'apply' | 'vote' | 'favorite'
+
+const tabs: { key: MineTab; label: string }[] = [
+  { key: 'apply', label: '我提交的' },
+  { key: 'vote', label: '我处理的' },
+  { key: 'favorite', label: '我围观的' }
 ]
 
-const type = ref<'apply' | 'vote' | 'favorite'>('apply')
+const type = ref<MineTab>('apply')
 const orders = ref<OrderItem[]>([])
 const profile = ref<ProfileData | null>(null)
 const unread = ref(0)
@@ -116,9 +118,9 @@ const loading = ref(false)
 const user = computed(() => userStore.user)
 
 const emptyText = computed(() => {
-  if (type.value === 'apply') return '还没发起过审批'
-  if (type.value === 'vote') return '还没批过别人的单'
-  return '还没有收藏'
+  if (type.value === 'apply') return '还没提交过审批'
+  if (type.value === 'vote') return '还没处理过别人的单'
+  return '还没围观过别人的单'
 })
 
 const editVisible = ref(false)
@@ -158,7 +160,7 @@ async function loadOrders(reset = false) {
   }
 }
 
-function switchTab(k: 'apply' | 'vote' | 'favorite') {
+function switchTab(k: MineTab) {
   if (type.value === k) return
   type.value = k
   orders.value = []

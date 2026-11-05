@@ -9,10 +9,12 @@ export interface OrderItem {
   price: number
   reason: string
   substitute?: string
+  extraNote?: string
   images?: string
   imageList?: string[]
   category?: string
   visibility: string
+  durationHours?: number
   status: string
   passCount: number
   rejectCount: number

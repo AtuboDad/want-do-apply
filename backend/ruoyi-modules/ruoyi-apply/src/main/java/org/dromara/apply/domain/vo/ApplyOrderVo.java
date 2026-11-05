@@ -54,6 +54,9 @@ public class ApplyOrderVo implements Serializable {
     /** 替代品 */
     private String substitute;
 
+    /** 发起人补充说明 */
+    private String extraNote;
+
     /** 图片（逗号分隔原值） */
     private String images;
 
@@ -65,6 +68,9 @@ public class ApplyOrderVo implements Serializable {
 
     /** 可见范围 */
     private String visibility;
+
+    /** 审批时长（小时） */
+    private Integer durationHours;
 
     /** 状态 */
     private String status;

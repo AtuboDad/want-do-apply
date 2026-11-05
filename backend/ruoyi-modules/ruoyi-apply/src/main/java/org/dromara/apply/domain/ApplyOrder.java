@@ -46,6 +46,9 @@ public class ApplyOrder extends BaseEntity {
     /** 替代品 */
     private String substitute;
 
+    /** 发起人补充说明（审批过程中可追加） */
+    private String extraNote;
+
     /** 图片，多个用逗号分隔 */
     private String images;
 
@@ -54,6 +57,9 @@ public class ApplyOrder extends BaseEntity {
 
     /** 可见范围（0公开 1群内） */
     private String visibility;
+
+    /** 审批时长（小时），到点后按少数服从多数结算 */
+    private Integer durationHours;
 
     /** 状态（0待审批 1已通过 2已驳回 3已撤销 4已过期） */
     private String status;
@@ -67,7 +73,7 @@ public class ApplyOrder extends BaseEntity {
     /** 已批阅人数 */
     private Integer voteCount;
 
-    /** 结算所需票数 */
+    /** 已废弃：早期按票数结案，现改为到点/提前结束时按少数服从多数结算 */
     private Integer targetVotes;
 
     /** 评论数 */

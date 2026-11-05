@@ -9,6 +9,8 @@ export interface CreateOrderParams {
   images?: string
   category?: string
   visibility: string
+  /** 审批时长（小时），1-72 */
+  durationHours?: number
   groupId?: number | null
 }
 
@@ -37,6 +39,16 @@ export function cancelOrder(id: number): Promise<void> {
   return request({ url: `/app/order/${id}/cancel`, method: 'POST' })
 }
 
+/** 补充说明（发起人，仅审批中可用） */
+export function updateNote(id: number, note: string): Promise<void> {
+  return request({ url: `/app/order/${id}/note`, method: 'POST', data: { note } })
+}
+
+/** 提前结束（发起人），按当前票数立即结算，返回结算后的状态 */
+export function finishEarly(id: number): Promise<string> {
+  return request({ url: `/app/order/${id}/finish`, method: 'POST' })
+}
+
 /** 删除 */
 export function removeOrder(id: number): Promise<void> {
   return request({ url: `/app/order/${id}`, method: 'DELETE' })
@@ -47,7 +59,7 @@ export function toggleFavorite(id: number): Promise<boolean> {
   return request({ url: `/app/order/${id}/favorite`, method: 'POST' })
 }
 
-/** 我的 */
+/** 我的：apply-我提交的 vote-我处理的 favorite-我围观的 */
 export function getMine(type: 'apply' | 'vote' | 'favorite', pageNum = 1, pageSize = 10): Promise<PageData<OrderItem>> {
   return request({ url: '/app/order/mine', data: { type, pageNum, pageSize } })
 }

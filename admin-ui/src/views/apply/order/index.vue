@@ -97,7 +97,7 @@
             <span class="pass">{{ row.passCount }}</span>
             <span class="sep">/</span>
             <span class="reject">{{ row.rejectCount }}</span>
-            <div class="sub">{{ row.voteCount }}/{{ row.targetVotes }}</div>
+            <div class="sub">已表态 {{ row.voteCount }} 人</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
@@ -146,8 +146,9 @@
           <el-descriptions-item label="购买理由">{{ current.reason }}</el-descriptions-item>
           <el-descriptions-item label="替代品">{{ current.substitute || '无' }}</el-descriptions-item>
           <el-descriptions-item label="票数">
-            通过 {{ current.passCount }} / 驳回 {{ current.rejectCount }}（已批 {{ current.voteCount }} / 目标 {{ current.targetVotes }}）
+            通过 {{ current.passCount }} / 驳回 {{ current.rejectCount }}（已表态 {{ current.voteCount }} 人）
           </el-descriptions-item>
+          <el-descriptions-item label="审批时长">{{ current.durationHours || 24 }} 小时</el-descriptions-item>
           <el-descriptions-item label="状态">{{ statusText(current.status) }}</el-descriptions-item>
           <el-descriptions-item label="范围">{{ current.visibility === '1' ? '群内：' + (current.groupName || '') : '公开广场' }}</el-descriptions-item>
           <el-descriptions-item label="截止">{{ current.expireTime }}</el-descriptions-item>
