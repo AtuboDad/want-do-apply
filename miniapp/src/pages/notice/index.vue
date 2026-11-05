@@ -20,6 +20,8 @@
 
       <Empty v-if="list.length === 0" text="还没有消息" emoji="🔔" />
     </view>
+
+    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="sheetVisible = false" />
   </view>
 </template>
 
@@ -27,6 +29,7 @@
 import { ref } from 'vue'
 import { onLoad, onReachBottom } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
+import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
 import { getNotices, markRead } from '../../api/group'
 import { fromNow } from '../../utils/format'
@@ -37,6 +40,14 @@ const list = ref<NoticeItem[]>([])
 const pageNum = ref(1)
 const hasMore = ref(true)
 const loading = ref(false)
+
+const sheetVisible = ref(false)
+const sheetOrderId = ref(0)
+
+function openSheet(id: number) {
+  sheetOrderId.value = id
+  sheetVisible.value = true
+}
 
 function iconOf(type: string) {
   switch (type) {
@@ -80,7 +91,7 @@ function openNotice(n: NoticeItem) {
     n.isRead = '1'
   }
   if (n.bizId) {
-    uni.navigateTo({ url: `/pages/detail/index?id=${n.bizId}` })
+    openSheet(Number(n.bizId))
   }
 }
 

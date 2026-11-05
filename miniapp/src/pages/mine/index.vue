@@ -44,7 +44,7 @@
     </view>
 
     <view class="list">
-      <OrderCard v-for="o in orders" :key="o.id" :item="o" />
+      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" />
       <Empty v-if="orders.length === 0" :text="emptyText" emoji="📭" />
       <view v-if="orders.length > 0" class="footer-tip">
         {{ hasMore ? '上拉加载更多' : '— 到底了 —' }}
@@ -70,6 +70,8 @@
         <button class="submit" @tap="saveProfile">保存</button>
       </view>
     </view>
+
+    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="sheetVisible = false" />
   </view>
 </template>
 
@@ -77,6 +79,7 @@
 import { computed, ref } from 'vue'
 import { onReachBottom, onShow } from '@dcloudio/uni-app'
 import OrderCard from '../../components/OrderCard.vue'
+import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
 import { getMine, getProfile } from '../../api/order'
 import { getUnread } from '../../api/group'
@@ -121,6 +124,14 @@ const emptyText = computed(() => {
 const editVisible = ref(false)
 const editNick = ref('')
 const editAvatar = ref('')
+
+const sheetVisible = ref(false)
+const sheetOrderId = ref(0)
+
+function openSheet(id: number) {
+  sheetOrderId.value = id
+  sheetVisible.value = true
+}
 
 async function loadProfile() {
   await ensureLogin()

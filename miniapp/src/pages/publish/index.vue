@@ -103,6 +103,7 @@ import { getMyGroups, joinGroupByCode } from '../../api/group'
 import { uploadFile } from '../../utils/request'
 import { CATEGORIES } from '../../utils/format'
 import { ensureLogin } from '../../utils/auth'
+import { setPendingOpenOrder } from '../../utils/order-sheet'
 import type { GroupItem } from '../../api/types'
 
 const statusBarHeight = ref(0)
@@ -216,8 +217,10 @@ async function submit() {
     })
     reset()
     uni.showToast({ title: '已发到广场', icon: 'none' })
+    // 把「要打开哪条」交给广场页，切过去之后它自己弹详情
     setTimeout(() => {
-      uni.navigateTo({ url: `/pages/detail/index?id=${id}` })
+      setPendingOpenOrder(id)
+      uni.switchTab({ url: '/pages/index/index' })
     }, 500)
   } catch (e) {
     // 错误已提示

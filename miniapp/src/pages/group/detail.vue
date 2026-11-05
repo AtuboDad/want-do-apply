@@ -24,7 +24,7 @@
         </view>
       </view>
 
-      <OrderCard v-for="o in orders" :key="o.id" :item="o" />
+      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" />
       <Empty v-if="orders.length === 0" text="群里还没人发单" emoji="🧾" />
 
       <view v-if="orders.length > 0" class="footer-tip">
@@ -37,6 +37,8 @@
       <button class="btn-quit" @tap="onQuit">{{ group?.isOwner ? '解散群' : '退出群' }}</button>
       <view class="safe" />
     </view>
+
+    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="sheetVisible = false" />
   </view>
 </template>
 
@@ -45,6 +47,7 @@ import { ref } from 'vue'
 import { onLoad, onReachBottom } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
 import OrderCard from '../../components/OrderCard.vue'
+import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
 import { getGroup, getGroupOrders, quitGroup, dissolveGroup } from '../../api/group'
 import { ensureLogin } from '../../utils/auth'
@@ -57,6 +60,14 @@ const sort = ref('new')
 const pageNum = ref(1)
 const hasMore = ref(true)
 const loading = ref(false)
+
+const sheetVisible = ref(false)
+const sheetOrderId = ref(0)
+
+function openSheet(id: number) {
+  sheetOrderId.value = id
+  sheetVisible.value = true
+}
 
 async function loadGroup() {
   await ensureLogin()

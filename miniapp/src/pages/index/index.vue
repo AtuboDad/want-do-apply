@@ -31,7 +31,7 @@
     </view>
 
     <view class="list">
-      <OrderCard v-for="item in list" :key="item.id" :item="item" />
+      <OrderCard v-for="item in list" :key="item.id" :item="item" @open="openSheet" />
 
       <Empty v-if="!loading && list.length === 0" text="广场还没人发单，来当第一个" emoji="🛒" />
 
@@ -39,6 +39,8 @@
         {{ hasMore ? '上拉加载更多' : '— 到底了 —' }}
       </view>
     </view>
+
+    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="sheetVisible = false" />
   </view>
 </template>
 
@@ -46,9 +48,11 @@
 import { ref } from 'vue'
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
 import OrderCard from '../../components/OrderCard.vue'
+import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
 import { getSquare } from '../../api/order'
 import { ensureLogin } from '../../utils/auth'
+import { takePendingOpenOrder } from '../../utils/order-sheet'
 import type { OrderItem } from '../../api/types'
 
 const statusBarHeight = ref(0)
@@ -69,6 +73,14 @@ const pageNum = ref(1)
 const pageSize = 10
 const hasMore = ref(true)
 const loading = ref(false)
+
+const sheetVisible = ref(false)
+const sheetOrderId = ref(0)
+
+function openSheet(id: number) {
+  sheetOrderId.value = id
+  sheetVisible.value = true
+}
 
 async function load(reset = false) {
   if (loading.value) return
@@ -106,6 +118,9 @@ function switchTab(key: string) {
 
 onShow(() => {
   load(true)
+  // 发完单后从「发一个」切回来，自动弹出刚发的那条
+  const pending = takePendingOpenOrder()
+  if (pending) setTimeout(() => openSheet(pending), 260)
 })
 
 onPullDownRefresh(async () => {
