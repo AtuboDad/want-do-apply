@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.apply.mapper.ApplyCommentMapper">
+
+    <select id="selectByOrderId" resultType="org.dromara.apply.domain.vo.ApplyCommentVo">
+        select
+            c.id, c.order_id, c.user_id, c.parent_id, c.reply_user_id, c.content,
+            c.like_count, c.create_time,
+            u.nick_name  as user_nick_name,
+            u.avatar     as user_avatar,
+            ru.nick_name as reply_nick_name
+        from apply_comment c
+        left join app_user u on u.id = c.user_id and u.del_flag = '0'
+        left join app_user ru on ru.id = c.reply_user_id and ru.del_flag = '0'
+        where c.del_flag = '0' and c.order_id = #{orderId}
+        order by c.create_time asc
+    </select>
+
+    <select id="selectAdminPage" resultType="org.dromara.apply.domain.vo.ApplyCommentVo">
+        select
+            c.id, c.order_id, c.user_id, c.parent_id, c.reply_user_id, c.content,
+            c.like_count, c.create_time,
+            u.nick_name as user_nick_name,
+            u.avatar    as user_avatar
+        from apply_comment c
+        left join app_user u on u.id = c.user_id and u.del_flag = '0'
+        where c.del_flag = '0'
+        <if test="bo.id != null">
+            and c.id = #{bo.id}
+        </if>
+        <if test="bo.orderId != null">
+            and c.order_id = #{bo.orderId}
+        </if>
+        <if test="bo.userId != null">
+            and c.user_id = #{bo.userId}
+        </if>
+        <if test="bo.keyword != null and bo.keyword != ''">
+            and c.content like concat('%', #{bo.keyword}, '%')
+        </if>
+        <if test="bo.beginTime != null">
+            and c.create_time &gt;= #{bo.beginTime}
+        </if>
+        <if test="bo.endTime != null">
+            and c.create_time &lt;= #{bo.endTime}
+        </if>
+        order by c.create_time desc
+    </select>
+
+</mapper>

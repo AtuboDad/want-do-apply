@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.apply.mapper.ApplyVoteMapper">
+
+    <!-- 某审批单下的批条 -->
+    <select id="selectByOrderId" resultType="org.dromara.apply.domain.vo.ApplyVoteVo">
+        select
+            v.id, v.order_id, v.user_id, v.result, v.reason, v.like_count, v.create_time,
+            u.nick_name as user_nick_name,
+            u.avatar    as user_avatar,
+            case when vl.id is null then 0 else 1 end as liked
+        from apply_vote v
+        left join app_user u on u.id = v.user_id and u.del_flag = '0'
+        left join apply_vote_like vl on vl.vote_id = v.id and vl.user_id = #{userId}
+        where v.del_flag = '0' and v.order_id = #{orderId}
+        <choose>
+            <when test="sort == 'hot'">
+                order by v.like_count desc, v.create_time desc
+            </when>
+            <otherwise>
+                order by v.create_time desc
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 管理端批条分页 -->
+    <select id="selectAdminPage" resultType="org.dromara.apply.domain.vo.ApplyVoteVo">
+        select
+            v.id, v.order_id, v.user_id, v.result, v.reason, v.like_count, v.create_time,
+            u.nick_name as user_nick_name,
+            u.avatar    as user_avatar
+        from apply_vote v
+        left join app_user u on u.id = v.user_id and u.del_flag = '0'
+        where v.del_flag = '0'
+        <if test="bo.id != null">
+            and v.id = #{bo.id}
+        </if>
+        <if test="bo.orderId != null">
+            and v.order_id = #{bo.orderId}
+        </if>
+        <if test="bo.userId != null">
+            and v.user_id = #{bo.userId}
+        </if>
+        <if test="bo.result != null and bo.result != ''">
+            and v.result = #{bo.result}
+        </if>
+        <if test="bo.keyword != null and bo.keyword != ''">
+            and v.reason like concat('%', #{bo.keyword}, '%')
+        </if>
+        <if test="bo.beginTime != null">
+            and v.create_time &gt;= #{bo.beginTime}
+        </if>
+        <if test="bo.endTime != null">
+            and v.create_time &lt;= #{bo.endTime}
+        </if>
+        order by v.create_time desc
+    </select>
+
+    <!-- 每日批条数 -->
+    <select id="countDailyVotes" resultType="java.util.Map">
+        select date_format(v.create_time, '%Y-%m-%d') as date, count(*) as cnt
+        from apply_vote v
+        where v.del_flag = '0'
+          and v.create_time &gt;= date_sub(curdate(), interval #{days} day)
+        group by date
+        order by date asc
+    </select>
+
+</mapper>

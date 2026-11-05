@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.apply.mapper.ApplyOrderMapper">
+
+    <sql id="baseColumns">
+        o.id, o.user_id, o.group_id, o.title, o.price, o.reason, o.substitute,
+        o.images, o.category, o.visibility, o.status, o.pass_count, o.reject_count,
+        o.vote_count, o.target_votes, o.comment_count, o.hot_score, o.expire_time,
+        o.settle_time, o.audit_status, o.audit_remark, o.is_top, o.create_time
+    </sql>
+
+    <!-- 广场 / 群内列表 -->
+    <select id="selectSquarePage" resultType="org.dromara.apply.domain.vo.ApplyOrderVo">
+        select
+            <include refid="baseColumns"/>,
+            u.nick_name as user_nick_name,
+            u.avatar    as user_avatar,
+            g.name      as group_name,
+            v.result    as my_result,
+            case when v.id is null then 0 else 1 end as my_voted,
+            case when o.user_id = #{userId} then 1 else 0 end as mine
+        from apply_order o
+        left join app_user u on u.id = o.user_id and u.del_flag = '0'
+        left join apply_group g on g.id = o.group_id and g.del_flag = '0'
+        left join apply_vote v on v.order_id = o.id and v.user_id = #{userId} and v.del_flag = '0'
+        where o.del_flag = '0'
+          and o.audit_status = '1'
+        <choose>
+            <when test="groupId != null">
+                and o.group_id = #{groupId}
+            </when>
+            <otherwise>
+                and o.visibility = '0'
+            </otherwise>
+        </choose>
+        <if test="status != null and status != ''">
+            and o.status = #{status}
+        </if>
+        <choose>
+            <when test="sort == 'hot'">
+                order by o.is_top desc, o.hot_score desc, o.create_time desc
+            </when>
+            <when test="sort == 'pending'">
+                and o.status = '0'
+                order by o.is_top desc, o.expire_time asc, o.create_time desc
+            </when>
+            <otherwise>
+                order by o.is_top desc, o.create_time desc
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 管理端列表 -->
+    <select id="selectAdminPage" resultType="org.dromara.apply.domain.vo.ApplyOrderVo">
+        select
+            <include refid="baseColumns"/>,
+            u.nick_name as user_nick_name,
+            u.avatar    as user_avatar,
+            g.name      as group_name
+        from apply_order o
+        left join app_user u on u.id = o.user_id and u.del_flag = '0'
+        left join apply_group g on g.id = o.group_id and g.del_flag = '0'
+        where o.del_flag = '0'
+        <if test="bo.id != null">
+            and o.id = #{bo.id}
+        </if>
+        <if test="bo.userId != null">
+            and o.user_id = #{bo.userId}
+        </if>
+        <if test="bo.nickName != null and bo.nickName != ''">
+            and u.nick_name like concat('%', #{bo.nickName}, '%')
+        </if>
+        <if test="bo.title != null and bo.title != ''">
+            and o.title like concat('%', #{bo.title}, '%')
+        </if>
+        <if test="bo.status != null and bo.status != ''">
+            and o.status = #{bo.status}
+        </if>
+        <if test="bo.visibility != null and bo.visibility != ''">
+            and o.visibility = #{bo.visibility}
+        </if>
+        <if test="bo.auditStatus != null and bo.auditStatus != ''">
+            and o.audit_status = #{bo.auditStatus}
+        </if>
+        <if test="bo.groupId != null">
+            and o.group_id = #{bo.groupId}
+        </if>
+        <if test="bo.isTop != null and bo.isTop != ''">
+            and o.is_top = #{bo.isTop}
+        </if>
+        <if test="bo.beginTime != null">
+            and o.create_time &gt;= #{bo.beginTime}
+        </if>
+        <if test="bo.endTime != null">
+            and o.create_time &lt;= #{bo.endTime}
+        </if>
+        order by o.is_top desc, o.create_time desc
+    </select>
+
+    <!-- 我的 -->
+    <select id="selectMinePage" resultType="org.dromara.apply.domain.vo.ApplyOrderVo">
+        select
+            <include refid="baseColumns"/>,
+            u.nick_name as user_nick_name,
+            u.avatar    as user_avatar,
+            g.name      as group_name,
+            mv.result   as my_result,
+            case when mv.id is null then 0 else 1 end as my_voted,
+            case when o.user_id = #{userId} then 1 else 0 end as mine
+        from apply_order o
+        left join app_user u on u.id = o.user_id and u.del_flag = '0'
+        left join apply_group g on g.id = o.group_id and g.del_flag = '0'
+        left join apply_vote mv on mv.order_id = o.id and mv.user_id = #{userId} and mv.del_flag = '0'
+        <choose>
+            <when test="type == 'vote'">
+                where o.del_flag = '0' and mv.id is not null
+            </when>
+            <when test="type == 'favorite'">
+                where o.del_flag = '0'
+                  and exists (select 1 from apply_favorite f where f.order_id = o.id and f.user_id = #{userId})
+            </when>
+            <otherwise>
+                where o.del_flag = '0' and o.user_id = #{userId}
+            </otherwise>
+        </choose>
+        order by o.create_time desc
+    </select>
+
+    <!-- 分类统计 -->
+    <select id="countByCategory" resultType="java.util.Map">
+        select ifnull(nullif(o.category, ''), 'other') as name, count(*) as value
+        from apply_order o
+        where o.del_flag = '0' and o.audit_status = '1'
+        group by name
+        order by value desc
+        limit 8
+    </select>
+
+    <!-- 每日审批单数 -->
+    <select id="countDailyOrders" resultType="java.util.Map">
+        select date_format(o.create_time, '%Y-%m-%d') as date, count(*) as cnt
+        from apply_order o
+        where o.del_flag = '0'
+          and o.create_time &gt;= date_sub(curdate(), interval #{days} day)
+        group by date
+        order by date asc
+    </select>
+
+    <!-- 被驳回金额合计 -->
+    <select id="sumRejected" resultType="java.util.Map">
+        select ifnull(sum(price), 0) as amount, count(*) as cnt
+        from apply_order
+        where del_flag = '0' and status = '2'
+    </select>
+
+</mapper>

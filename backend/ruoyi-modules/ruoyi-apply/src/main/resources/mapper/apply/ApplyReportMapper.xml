@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.apply.mapper.ApplyReportMapper">
+
+    <select id="selectAdminPage" resultType="org.dromara.apply.domain.vo.ApplyReportVo">
+        select
+            r.id, r.target_type, r.target_id, r.reporter_id, r.reason_type, r.content,
+            r.status, r.handle_by, r.handle_time, r.handle_remark, r.create_time,
+            u.nick_name as reporter_nick_name,
+            case r.target_type
+                when '1' then (select o.title from apply_order o where o.id = r.target_id)
+                when '2' then (select v.reason from apply_vote v where v.id = r.target_id)
+                when '3' then (select c.content from apply_comment c where c.id = r.target_id)
+            end as target_summary
+        from apply_report r
+        left join app_user u on u.id = r.reporter_id and u.del_flag = '0'
+        where r.del_flag = '0'
+        <if test="bo.id != null">
+            and r.id = #{bo.id}
+        </if>
+        <if test="bo.status != null and bo.status != ''">
+            and r.status = #{bo.status}
+        </if>
+        <if test="bo.targetType != null and bo.targetType != ''">
+            and r.target_type = #{bo.targetType}
+        </if>
+        <if test="bo.userId != null">
+            and r.reporter_id = #{bo.userId}
+        </if>
+        <if test="bo.beginTime != null">
+            and r.create_time &gt;= #{bo.beginTime}
+        </if>
+        <if test="bo.endTime != null">
+            and r.create_time &lt;= #{bo.endTime}
+        </if>
+        order by r.status asc, r.create_time desc
+    </select>
+
+</mapper>

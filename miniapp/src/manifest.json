@@ -1,0 +1,65 @@
+{
+  "name": "钱包请等等",
+  "appid": "",
+  "description": "钱包请等等 - 消费审批小程序",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "modules": {},
+    "distribute": {
+      "android": {
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+          "<uses-permission android:name=\"android.permission.INTERNET\"/>"
+        ]
+      },
+      "ios": {},
+      "sdkConfigs": {}
+    }
+  },
+  "quickapp": {},
+  "mp-weixin": {
+    "appid": "wx0000000000000000",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true,
+      "postcss": true
+    },
+    "usingComponents": true,
+    "permission": {},
+    "requiredPrivateInfos": [],
+    "lazyCodeLoading": "requiredComponents"
+  },
+  "h5": {
+    "title": "钱包请等等",
+    "router": {
+      "mode": "hash",
+      "base": "/"
+    },
+    "devServer": {
+      "port": 5174,
+      "proxy": {
+        "/app": {
+          "target": "http://localhost:8080",
+          "changeOrigin": true
+        },
+        "/app-file": {
+          "target": "http://localhost:8080",
+          "changeOrigin": true
+        }
+      }
+    }
+  },
+  "vueVersion": "3"
+}

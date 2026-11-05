@@ -1,0 +1,476 @@
+<template>
+  <view class="page">
+    <view class="hero">
+      <view class="status-bar" :style="{ height: statusBarHeight + 'px' }" />
+      <view class="hero-inner">
+        <text class="hero-title">发起一个审批</text>
+        <text class="hero-sub">把冲动消费交给网友审判</text>
+      </view>
+    </view>
+
+    <view class="form">
+      <!-- 商品 -->
+      <view class="field">
+        <text class="label">想买什么 <text class="req">*</text></text>
+        <input v-model="form.title" class="input" placeholder="例：一把 1800 的机械键盘" maxlength="100" />
+      </view>
+
+      <view class="field">
+        <text class="label">多少钱 <text class="req">*</text></text>
+        <view class="price-input">
+          <text class="yuan">¥</text>
+          <input v-model="priceText" class="input price" type="digit" placeholder="0.00" />
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="label">为什么要买 <text class="req">*</text></text>
+        <textarea
+          v-model="form.reason"
+          class="textarea"
+          placeholder="认真写，这是网友判决的依据（5-500 字）"
+          maxlength="500"
+          auto-height
+        />
+        <text class="counter">{{ form.reason.length }}/500</text>
+      </view>
+
+      <view class="field">
+        <text class="label">有没有替代品</text>
+        <input v-model="form.substitute" class="input" placeholder="例：家里那把还能用（没有可不填）" maxlength="200" />
+      </view>
+
+      <view class="field">
+        <text class="label">图片（最多 3 张）</text>
+        <view class="uploader">
+          <view v-for="(img, i) in images" :key="i" class="img-wrap">
+            <image class="img" :src="img" mode="aspectFill" />
+            <view class="del" @tap="removeImage(i)">✕</view>
+          </view>
+          <view v-if="images.length < 3" class="add" @tap="chooseImage">
+            <text class="plus">+</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="label">分类</text>
+        <view class="chips">
+          <text
+            v-for="c in CATEGORIES"
+            :key="c.value"
+            class="chip"
+            :class="{ on: form.category === c.value }"
+            @tap="form.category = c.value"
+          >
+            {{ c.label }}
+          </text>
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="label">发给谁看</text>
+        <view class="visibility">
+          <view class="v-item" :class="{ on: form.visibility === '0' }" @tap="form.visibility = '0'">
+            <text class="v-title">公开广场</text>
+            <text class="v-desc">让所有网友帮你把关</text>
+          </view>
+          <view class="v-item" :class="{ on: form.visibility === '1' }" @tap="pickGroup">
+            <text class="v-title">只发审批群</text>
+            <text class="v-desc">只给熟人看，更放得开</text>
+          </view>
+        </view>
+        <view v-if="form.visibility === '1'" class="group-pick" @tap="pickGroup">
+          <text v-if="selectedGroup">{{ selectedGroup.name }}（{{ selectedGroup.memberCount }} 人）</text>
+          <text v-else class="placeholder">选择审批群 ›</text>
+        </view>
+      </view>
+
+      <button class="submit" :disabled="submitting" @tap="submit">
+        {{ submitting ? '提交中…' : '发到广场' }}
+      </button>
+
+      <text class="tip">提交后 24 小时内有效，攒够 10 条批条自动结案</text>
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { createOrder } from '../../api/order'
+import { getMyGroups, joinGroupByCode } from '../../api/group'
+import { uploadFile } from '../../utils/request'
+import { CATEGORIES } from '../../utils/format'
+import { ensureLogin } from '../../utils/auth'
+import type { GroupItem } from '../../api/types'
+
+const statusBarHeight = ref(0)
+// #ifdef MP-WEIXIN
+statusBarHeight.value = uni.getSystemInfoSync().statusBarHeight || 20
+// #endif
+
+const form = ref({
+  title: '',
+  reason: '',
+  substitute: '',
+  category: 'other',
+  visibility: '0',
+  groupId: null as number | null
+})
+
+const priceText = ref('')
+const images = ref<string[]>([])
+const groups = ref<GroupItem[]>([])
+const submitting = ref(false)
+
+const selectedGroup = computed(() => groups.value.find((g) => g.id === form.value.groupId) || null)
+
+async function loadGroups() {
+  try {
+    groups.value = await getMyGroups()
+  } catch (e) {
+    groups.value = []
+  }
+}
+
+function chooseImage() {
+  uni.chooseImage({
+    count: 3 - images.value.length,
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const files = res.tempFilePaths as string[]
+      for (const f of files) {
+        try {
+          uni.showLoading({ title: '上传中' })
+          const up = await uploadFile(f)
+          images.value.push(up.url)
+        } catch (e) {
+          // ignore
+        } finally {
+          uni.hideLoading()
+        }
+      }
+    }
+  })
+}
+
+function removeImage(i: number) {
+  images.value.splice(i, 1)
+}
+
+async function pickGroup() {
+  if (groups.value.length === 0) {
+    uni.showModal({
+      title: '还没有审批群',
+      content: '去创建一个，或者用邀请码加入朋友的群',
+      confirmText: '去创建',
+      success: (res) => {
+        if (res.confirm) uni.switchTab({ url: '/pages/group/index' })
+      }
+    })
+    return
+  }
+  uni.showActionSheet({
+    itemList: groups.value.map((g) => g.name),
+    success: (res) => {
+      const g = groups.value[res.tapIndex]
+      form.value.groupId = g.id
+      form.value.visibility = '1'
+    }
+  })
+}
+
+async function submit() {
+  if (submitting.value) return
+  if (!form.value.title.trim()) {
+    uni.showToast({ title: '想买什么都还没说', icon: 'none' })
+    return
+  }
+  const price = Number(priceText.value)
+  if (!priceText.value || isNaN(price) || price <= 0) {
+    uni.showToast({ title: '填个价格吧', icon: 'none' })
+    return
+  }
+  if (form.value.reason.trim().length < 5) {
+    uni.showToast({ title: '理由至少写 5 个字', icon: 'none' })
+    return
+  }
+  if (form.value.visibility === '1' && !form.value.groupId) {
+    uni.showToast({ title: '请选择审批群', icon: 'none' })
+    return
+  }
+
+  submitting.value = true
+  try {
+    await ensureLogin()
+    const id = await createOrder({
+      title: form.value.title.trim(),
+      price,
+      reason: form.value.reason.trim(),
+      substitute: form.value.substitute.trim(),
+      images: images.value.join(','),
+      category: form.value.category,
+      visibility: form.value.visibility,
+      groupId: form.value.groupId
+    })
+    reset()
+    uni.showToast({ title: '已发到广场', icon: 'none' })
+    setTimeout(() => {
+      uni.navigateTo({ url: `/pages/detail/index?id=${id}` })
+    }, 500)
+  } catch (e) {
+    // 错误已提示
+  } finally {
+    submitting.value = false
+  }
+}
+
+function reset() {
+  form.value = { title: '', reason: '', substitute: '', category: 'other', visibility: '0', groupId: null }
+  priceText.value = ''
+  images.value = []
+}
+
+onShow(() => {
+  loadGroups()
+})
+</script>
+
+<style lang="scss" scoped>
+.page {
+  min-height: 100vh;
+  background: #f5f5f7;
+  padding-bottom: 60rpx;
+}
+
+.hero {
+  background: linear-gradient(135deg, #ff8a3d 0%, #ff6b35 55%, #f2542d 100%);
+  padding-bottom: 60rpx;
+  border-bottom-left-radius: 36rpx;
+  border-bottom-right-radius: 36rpx;
+}
+
+.hero-inner {
+  padding: 16rpx 36rpx 0;
+}
+
+.hero-title {
+  font-size: 44rpx;
+  font-weight: 800;
+  color: #fff;
+}
+
+.hero-sub {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.form {
+  padding: 24rpx;
+}
+
+.field {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.label {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.req {
+  color: #ff6b35;
+}
+
+.input {
+  margin-top: 16rpx;
+  font-size: 30rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  color: #1a1a1a;
+}
+
+.price-input {
+  display: flex;
+  align-items: baseline;
+  margin-top: 12rpx;
+  gap: 8rpx;
+}
+
+.yuan {
+  font-size: 32rpx;
+  color: #ff6b35;
+  font-weight: 700;
+}
+
+.input.price {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #ff6b35;
+  margin-top: 0;
+  height: 70rpx;
+}
+
+.textarea {
+  margin-top: 16rpx;
+  width: 100%;
+  min-height: 160rpx;
+  background: #fafafa;
+  border-radius: 16rpx;
+  padding: 22rpx;
+  font-size: 28rpx;
+  line-height: 1.65;
+}
+
+.counter {
+  display: block;
+  text-align: right;
+  font-size: 21rpx;
+  color: #b8bcc2;
+  margin-top: 8rpx;
+}
+
+.uploader {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 18rpx;
+  flex-wrap: wrap;
+}
+
+.img-wrap {
+  position: relative;
+  width: 180rpx;
+  height: 180rpx;
+}
+
+.img {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 16rpx;
+  background: #f5f5f7;
+}
+
+.del {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 16rpx;
+  background: #fafafa;
+  border: 2rpx dashed #e0e0e4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plus {
+  font-size: 56rpx;
+  color: #c4c8ce;
+  line-height: 1;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.chip {
+  font-size: 25rpx;
+  color: #6b7280;
+  background: #f5f5f7;
+  border-radius: 999rpx;
+  padding: 10rpx 26rpx;
+}
+
+.chip.on {
+  color: #fff;
+  background: #ff6b35;
+  font-weight: 600;
+}
+
+.visibility {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 18rpx;
+}
+
+.v-item {
+  flex: 1;
+  border: 2rpx solid #f0f0f2;
+  border-radius: 18rpx;
+  padding: 20rpx;
+}
+
+.v-item.on {
+  border-color: #ff6b35;
+  background: #fff7f2;
+}
+
+.v-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.v-desc {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: #9aa0a6;
+}
+
+.group-pick {
+  margin-top: 16rpx;
+  background: #fafafa;
+  border-radius: 16rpx;
+  padding: 22rpx;
+  font-size: 26rpx;
+}
+
+.placeholder {
+  color: #9aa0a6;
+}
+
+.submit {
+  margin-top: 32rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #ff8a3d, #ff6b35);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 700;
+  box-shadow: 0 8rpx 24rpx rgba(255, 107, 53, 0.3);
+}
+
+.tip {
+  display: block;
+  text-align: center;
+  font-size: 22rpx;
+  color: #b8bcc2;
+  margin-top: 24rpx;
+}
+</style>

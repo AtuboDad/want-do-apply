@@ -1,0 +1,85 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "钱包请等等",
+        "enablePullDownRefresh": true,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/detail/index",
+      "style": {
+        "navigationBarTitleText": "审批详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/publish/index",
+      "style": {
+        "navigationBarTitleText": "发起审批",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/group/index",
+      "style": {
+        "navigationBarTitleText": "审批群",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/group/detail",
+      "style": {
+        "navigationBarTitleText": "群内审批",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/notice/index",
+      "style": {
+        "navigationBarTitleText": "消息",
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#9AA0A6",
+    "selectedColor": "#FF6B35",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "fontSize": "11px",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "广场"
+      },
+      {
+        "pagePath": "pages/publish/index",
+        "text": "发一个"
+      },
+      {
+        "pagePath": "pages/group/index",
+        "text": "审批群"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "钱包请等等",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F5F5F7"
+  }
+}
