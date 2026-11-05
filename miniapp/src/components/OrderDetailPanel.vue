@@ -571,15 +571,22 @@ defineExpose({ onMore, reload: load, wasChanged: () => dirty.value })
 </script>
 
 <style lang="scss" scoped>
+/* 弹层内部：头部固定、正文滚动、底部操作栏固定。
+   小程序里 scroll-view 是原生组件，只写 flex:1 它不会跟着父级收缩，
+   而是按内容撑到很高，把下面的 action-bar 顶出 .os-sheet（overflow:hidden 一裁就没了）
+   —— 表现就是「详情里看不到通过/驳回按钮」。
+   必须同时给 flex-basis:0 和 height:0，它才会按剩余空间算高度。 */
 .panel {
-  flex: 1;
+  flex: 1 1 0;
+  height: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .panel-scroll {
-  flex: 1;
+  flex: 1 1 0;
+  height: 0;
   min-height: 0;
 }
 
