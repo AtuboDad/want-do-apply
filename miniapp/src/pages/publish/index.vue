@@ -180,6 +180,9 @@ const selectedGroup = computed(() => groups.value.find((g) => g.id === form.valu
 
 async function loadGroups() {
   try {
+    // 冷启动直接落在这页时还没有 token，不先静默登录就会吃一个 401，
+    // 闪一句「登录已失效」再被踢回广场
+    await ensureLogin()
     groups.value = await getMyGroups()
   } catch (e) {
     groups.value = []
