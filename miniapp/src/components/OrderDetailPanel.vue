@@ -133,7 +133,6 @@
       <view v-else class="voted-tip">
         <text>{{ order.myVoted ? '你已经批过这单了' : '这单已经结案' }}</text>
       </view>
-      <view class="safe-area" />
     </view>
 
     <!-- 批阅弹窗 -->
@@ -684,10 +683,9 @@ defineExpose({ onMore, reload: load })
 
 .action-bar {
   background: #fff;
-  padding: 20rpx 28rpx;
+  /* 弹层已整体悬空，底部安全区由外层负责，这里只留视觉间距 */
+  padding: 20rpx 28rpx 24rpx;
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.04);
-  border-top-left-radius: 24rpx;
-  border-top-right-radius: 24rpx;
   flex-shrink: 0;
 }
 
@@ -748,10 +746,6 @@ defineExpose({ onMore, reload: load })
   padding: 16rpx 0;
 }
 
-.safe-area {
-  height: env(safe-area-inset-bottom);
-}
-
 .mask {
   position: fixed;
   top: 0;
@@ -769,7 +763,7 @@ defineExpose({ onMore, reload: load })
   background: #fff;
   border-top-left-radius: 32rpx;
   border-top-right-radius: 32rpx;
-  padding: 36rpx 32rpx calc(36rpx + env(safe-area-inset-bottom));
+  padding: 36rpx 32rpx 44rpx;
 }
 
 .sheet-head {

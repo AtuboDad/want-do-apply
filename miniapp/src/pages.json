@@ -57,22 +57,32 @@
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "fontSize": "11px",
+    "iconWidth": "26px",
+    "iconHeight": "26px",
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "广场"
+        "text": "广场",
+        "iconPath": "static/tabbar/tab-square.png",
+        "selectedIconPath": "static/tabbar/tab-square-active.png"
       },
       {
         "pagePath": "pages/publish/index",
-        "text": "发一个"
+        "text": "发一个",
+        "iconPath": "static/tabbar/tab-publish.png",
+        "selectedIconPath": "static/tabbar/tab-publish-active.png"
       },
       {
         "pagePath": "pages/group/index",
-        "text": "审批群"
+        "text": "审批群",
+        "iconPath": "static/tabbar/tab-group.png",
+        "selectedIconPath": "static/tabbar/tab-group-active.png"
       },
       {
         "pagePath": "pages/mine/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "static/tabbar/tab-mine.png",
+        "selectedIconPath": "static/tabbar/tab-mine-active.png"
       }
     ]
   },

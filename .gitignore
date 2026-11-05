@@ -52,3 +52,7 @@ docs/.env
 application-local.yml
 .env.local
 .env.*.local
+
+# ===== 验证工具产生的临时文件 =====
+.playwright-cli/
+scripts/_tabbar_preview.png

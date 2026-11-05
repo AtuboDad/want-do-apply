@@ -82,12 +82,16 @@ want-do-apply/
 ├── miniapp/
 │   └── src/
 │       ├── api/                         # order / vote / group
-│       ├── components/                  # NavBar / Empty / OrderCard / VoteCard
+│       ├── components/                  # NavBar / Empty / OrderCard / VoteCard / OrderSheet / OrderDetailPanel
 │       ├── pages/                       # 广场 / 详情 / 发布 / 审批群 / 我的 / 通知
+│       ├── static/tabbar/               # tabBar 图标（81x81 PNG，灰/橙两态）
 │       ├── store/user.ts
 │       └── utils/                       # request / auth / config / format
+├── scripts/                             # 启动脚本、tabBar 图标生成器
 └── docs/                                # 建库、探活、接口冒烟脚本
 ```
+
+> tabBar 图标由 `scripts/gen_tabbar_icons.py`（Pillow 绘制）生成，改形状/配色后重跑即可，会同时输出一张 2×4 的预览图。
 
 ---
 

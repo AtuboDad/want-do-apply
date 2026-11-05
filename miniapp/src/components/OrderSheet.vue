@@ -108,6 +108,9 @@ function onMore() {
   transition: background 0.28s ease;
   display: flex;
   align-items: flex-end;
+  /* 左右 + 底部留白，卡片从底部「浮」起来，不跟屏幕边缘粘在一起 */
+  padding: 0 22rpx calc(22rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
 .os-mask.show {
@@ -120,21 +123,20 @@ function onMore() {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 14vh;
+  bottom: 21vh;
 }
 
 .os-sheet {
   width: 100%;
-  height: 86vh;
+  height: 82vh;
   background: #f5f5f7;
-  /* 上半部分做成大圆角，视觉上像一张浮起来的卡片 */
-  border-top-left-radius: 48rpx;
-  border-top-right-radius: 48rpx;
-  box-shadow: 0 -10rpx 48rpx rgba(0, 0, 0, 0.14);
+  /* 四角都圆，像一张独立浮起的卡片 */
+  border-radius: 44rpx;
+  box-shadow: 0 16rpx 60rpx rgba(0, 0, 0, 0.22);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: translateY(100%);
+  transform: translateY(110%);
   transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
@@ -147,8 +149,8 @@ function onMore() {
   flex-shrink: 0;
   padding-top: 16rpx;
   background: #f5f5f7;
-  border-top-left-radius: 48rpx;
-  border-top-right-radius: 48rpx;
+  border-top-left-radius: 44rpx;
+  border-top-right-radius: 44rpx;
 }
 
 .os-grab {
