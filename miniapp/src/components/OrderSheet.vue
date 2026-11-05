@@ -49,7 +49,10 @@ const props = defineProps<{
   orderId: number | string
 }>()
 
-const emit = defineEmits<{ (e: 'close'): void }>()
+const emit = defineEmits<{
+  /** changed=true 表示弹层里真的改过这单，列表页可以据此决定要不要重拉 */
+  (e: 'close', changed?: boolean): void
+}>()
 
 /** mounted 控制是否渲染，shown 控制动画状态，两者分开才能做出「滑出 + 淡出」的关闭动画 */
 const mounted = ref(false)
@@ -152,7 +155,7 @@ onUnmounted(() => {
 })
 
 function close() {
-  emit('close')
+  emit('close', panelRef.value?.wasChanged?.() === true)
 }
 
 function onMore() {

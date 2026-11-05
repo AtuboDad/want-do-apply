@@ -44,7 +44,7 @@
       </view>
     </view>
 
-    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="sheetVisible = false" />
+    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="handleSheetClose" />
   </view>
 </template>
 
@@ -87,6 +87,15 @@ const sheetOrderId = ref(0)
 function openSheet(id: number) {
   sheetOrderId.value = id
   sheetVisible.value = true
+}
+
+/**
+ * 弹层里可能批过票 / 撤回 / 提前结束 / 补过说明，
+ * 改过就静默刷一遍，免得卡片还是旧状态；什么都没干就不动，别把翻到第几页的列表打回首页。
+ */
+function handleSheetClose(changed?: boolean) {
+  sheetVisible.value = false
+  if (changed) load(true)
 }
 
 async function load(reset = false) {

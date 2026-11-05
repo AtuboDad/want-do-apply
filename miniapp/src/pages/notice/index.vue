@@ -25,7 +25,7 @@
       <Empty v-if="list.length === 0" text="还没有消息" emoji="🔔" />
     </view>
 
-    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="sheetVisible = false" />
+    <OrderSheet :visible="sheetVisible" :order-id="sheetOrderId" @close="handleSheetClose" />
   </view>
 </template>
 
@@ -54,6 +54,12 @@ const sheetOrderId = ref(0)
 function openSheet(id: number) {
   sheetOrderId.value = id
   sheetVisible.value = true
+}
+
+/** 弹层里改过这单才刷新，什么都没干就别动列表 */
+function handleSheetClose(changed?: boolean) {
+  sheetVisible.value = false
+  if (changed) load(true)
 }
 
 function iconOf(type: string) {

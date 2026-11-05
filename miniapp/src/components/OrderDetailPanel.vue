@@ -269,6 +269,14 @@ const votes = ref<VoteItem[]>([])
 const comments = ref<CommentItem[]>([])
 const voteSort = ref<'hot' | 'new'>('hot')
 
+/**
+ * 这次打开弹层有没有真的改动过这单（投票 / 撤回 / 提前结束 / 补说明 / 评论）。
+ *
+ * 列表页据此决定关掉弹层后要不要重拉：什么都没干就重拉，
+ * 会把翻了三四页的列表打回第一页，比状态不刷新更烦人。
+ */
+const dirty = ref(false)
+
 const voteVisible = ref(false)
 const voteResult = ref('1')
 const voteReason = ref('')
@@ -381,6 +389,7 @@ async function doVote() {
     reason: voteReason.value.trim()
   })
   voteVisible.value = false
+  dirty.value = true
   uni.showToast({ title: settled ? '审批已结束' : '批完啦，等大家投票', icon: 'none' })
   await load()
 }
@@ -410,6 +419,7 @@ function cancelMine() {
     success: async (res) => {
       if (res.confirm) {
         await cancelOrder(props.orderId)
+        dirty.value = true
         uni.showToast({ title: '已撤回', icon: 'none' })
         await load()
       }
@@ -430,6 +440,7 @@ async function saveNote() {
   }
   await updateNote(props.orderId, text)
   noteVisible.value = false
+  dirty.value = true
   uni.showToast({ title: '补充好了', icon: 'none' })
   await load()
 }
@@ -451,6 +462,7 @@ function finishEarly() {
       if (!res.confirm) return
       try {
         const status = await finishEarlyApi(props.orderId)
+        dirty.value = true
         const tip = status === '1' ? '通过了' : status === '2' ? '被驳回了' : '流拍了'
         uni.showToast({ title: tip, icon: 'none' })
       } catch (e) {
@@ -492,6 +504,7 @@ async function doComment() {
   commentVisible.value = false
   commentText.value = ''
   replyTarget.value = null
+  dirty.value = true
   comments.value = await getComments(props.orderId)
   uni.showToast({ title: '发布成功', icon: 'none' })
 }
@@ -522,7 +535,7 @@ async function onMore() {
   })
 }
 
-defineExpose({ onMore, reload: load })
+defineExpose({ onMore, reload: load, wasChanged: () => dirty.value })
 </script>
 
 <style lang="scss" scoped>
