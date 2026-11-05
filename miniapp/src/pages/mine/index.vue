@@ -85,7 +85,7 @@
     </scroll-view>
 
     <view class="list">
-      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" />
+      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" @favorite="handleFavorite" />
       <Empty v-if="!loading && orders.length === 0" :text="emptyText" emoji="📭" />
       <view v-if="orders.length > 0" class="footer-tip">
         {{ hasMore ? '上拉加载更多' : '— 到底了 —' }}
@@ -108,18 +108,24 @@
           <text class="avatar-tip">挑一个顺眼的形象</text>
         </view>
 
-        <text class="block-label">我们画的</text>
-        <view class="avatar-grid">
-          <view
-            v-for="id in PRESET_AVATARS"
-            :key="id"
-            class="av-cell"
-            :class="{ on: editAvatar === presetAvatarValue(id) }"
-            @tap="pickPreset(id)"
-          >
-            <image class="av-img" :src="presetAvatarPath(id)" mode="aspectFill" />
-          </view>
+        <view class="block-row">
+          <text class="block-label">我们画的</text>
+          <text class="block-more">共 {{ PRESET_AVATARS.length }} 个 · 上下滑</text>
         </view>
+        <!-- 20 个头像 5 行，固定 3 行高度内部滚，别把弹层顶出屏幕 -->
+        <scroll-view class="avatar-scroll" scroll-y :show-scrollbar="false">
+          <view class="avatar-grid">
+            <view
+              v-for="id in PRESET_AVATARS"
+              :key="id"
+              class="av-cell"
+              :class="{ on: editAvatar === presetAvatarValue(id) }"
+              @tap="pickPreset(id)"
+            >
+              <image class="av-img" :src="presetAvatarPath(id)" mode="aspectFill" />
+            </view>
+          </view>
+        </scroll-view>
 
         <button class="wx-avatar" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
           或者用微信头像
@@ -148,7 +154,7 @@ import { onReachBottom, onShow } from '@dcloudio/uni-app'
 import OrderCard from '../../components/OrderCard.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
-import { getMine, getProfile } from '../../api/order'
+import { getMine, getProfile, toggleFavorite } from '../../api/order'
 import { getUnread } from '../../api/group'
 import { updateProfile } from '../../api/auth'
 import { uploadFile } from '../../utils/request'
@@ -211,9 +217,20 @@ const inset = ref(0)
 const sheetVisible = ref(false)
 /** 弹层打开时锁页面滚动（仅小程序生效） */
 const pageStyle = pageStyleWhen(() => sheetVisible.value)
-const sheetOrderId = ref(0)
+const sheetOrderId = ref<number | string>(0)
 
-function openSheet(id: number) {
+/** 卡片上的围观按钮：点一下关注，再点取消 */
+async function handleFavorite(item: OrderItem) {
+  try {
+    const fav = await toggleFavorite(item.id)
+    item.favorited = fav
+    uni.showToast({ title: fav ? '开始围观' : '取消围观', icon: 'none' })
+  } catch (e) {
+    // 提示已在 request 里统一弹过
+  }
+}
+
+function openSheet(id: number | string) {
   sheetOrderId.value = id
   sheetVisible.value = true
 }
@@ -252,6 +269,9 @@ async function loadOrders(reset = false) {
   const seq = ++reqSeq
   loading.value = true
   try {
+    // 冷启动直接落在这一页时还没有 token，不先登录会吃 401，
+    // 表现就是「统计有数、列表空白」。广场页早就这么做了，这里补上。
+    await ensureLogin()
     const res = await getMine(type.value, pageNum.value, 10, keyword.value, status.value)
     if (seq !== reqSeq) return // 期间又发了新请求，这次结果作废
     const rows = res.rows || []
@@ -299,12 +319,29 @@ onUnmounted(() => {
 
 // ---------------- 切换 ----------------
 
+/**
+ * 切换 tab。
+ *
+ * 点「已经选中的那个 tab」按老逻辑直接 return —— 用户发完单回到这一页，
+ * 再点一次「我提交的」想让它刷新，结果一声不响，列表还是旧数据，
+ * 而顶部「发起」统计已经是新数字，看着就像两条单丢了一条。
+ * 所以：再点一次当前 tab = 手动刷新。
+ */
 function switchTab(k: MineTab) {
-  if (type.value === k) return
+  if (type.value === k) {
+    refreshList()
+    return
+  }
   type.value = k
   status.value = ''
+  refreshList()
+}
+
+/** 清空重拉 + 回到顶部；搜索词会保留，切 tab 时状态筛选由 switchTab 清掉 */
+function refreshList() {
   orders.value = []
   loadOrders(true)
+  uni.pageScrollTo({ scrollTop: 0, duration: 200 })
 }
 
 function switchStatus(k: string) {
@@ -728,18 +765,37 @@ onReachBottom(() => {
   color: #9a9488;
 }
 
+.block-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.block-more {
+  font-size: 22rpx;
+  color: #b3ada0;
+}
+
+/* 3 行整：3×140 + 2×16 = 452rpx，剩下的靠内部滚动 */
+.avatar-scroll {
+  max-height: 452rpx;
+  margin-top: 14rpx;
+  padding-bottom: 6rpx;
+  box-sizing: content-box;
+}
+
 /* 4 列：4×140 + 3×16 = 608rpx，排在 686rpx 的可用宽度里居中 */
 .avatar-grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 16rpx;
-  margin-top: 14rpx;
 }
 
 .av-cell {
   width: 140rpx;
   height: 140rpx;
+  flex-shrink: 0;
   border-radius: 50%;
   overflow: hidden;
   box-sizing: border-box;

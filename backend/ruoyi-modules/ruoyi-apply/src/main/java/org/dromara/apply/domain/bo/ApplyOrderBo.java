@@ -41,7 +41,7 @@ public class ApplyOrderBo implements Serializable {
 
     /** 购买理由 */
     @NotBlank(message = "购买理由不能为空")
-    @Size(min = 5, max = 500, message = "购买理由需要5-500个字符")
+    @Size(min = 5, max = 1000, message = "购买理由需要5-1000个字符")
     private String reason;
 
     /** 替代品 */

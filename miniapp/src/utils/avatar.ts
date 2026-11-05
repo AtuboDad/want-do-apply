@@ -12,7 +12,11 @@ import { fullUrl } from './request'
 const PRESET_PREFIX = 'preset:'
 
 /** 预设头像 ID，顺序即选择面板里的排列顺序 */
-export const PRESET_AVATARS = ['av01', 'av02', 'av03', 'av04', 'av05', 'av06', 'av07', 'av08']
+export const PRESET_AVATARS = [
+  'av01', 'av02', 'av03', 'av04', 'av05', 'av06', 'av07', 'av08',
+  'av09', 'av10', 'av11', 'av12', 'av13', 'av14', 'av15', 'av16',
+  'av17', 'av18', 'av19', 'av20'
+]
 
 /** 没设头像时的兜底：暖色底 + 小圆头 */
 export const DEFAULT_AVATAR =

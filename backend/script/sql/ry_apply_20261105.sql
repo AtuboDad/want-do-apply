@@ -16,11 +16,15 @@ execute stmt;
 deallocate prepare stmt;
 
 -- 2. 存量用户补默认头像：preset:avNN 由小程序读包内图片，按 id 轮转保证每人不一样
+--    （预设头像已扩到 20 张，新库直接按 20 轮转；老库只补空头像的，不动已有选择）
 update app_user u
 join (
   select id, row_number() over (order by id) as rn
   from app_user
   where del_flag = '0'
 ) t on t.id = u.id
-set u.avatar = concat('preset:av0', ((t.rn - 1) % 8) + 1)
+set u.avatar = concat('preset:av', lpad(((t.rn - 1) % 20) + 1, 2, '0'))
 where u.avatar is null or u.avatar = '';
+
+-- 3. 购买理由上限 500 -> 1000（长理由要写得下，varchar(500) 会直接截断报错）
+alter table apply_order modify column reason varchar(1000) default '' comment '购买理由';

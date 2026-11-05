@@ -28,11 +28,11 @@
         <textarea
           v-model="form.reason"
           class="textarea"
-          placeholder="认真写，这是网友判决的依据（5-500 字）"
-          maxlength="500"
+          placeholder="认真写，这是网友判决的依据（5-1000 字）"
+          maxlength="1000"
           auto-height
         />
-        <text class="counter">{{ form.reason.length }}/500</text>
+        <text class="counter">{{ form.reason.length }}/1000</text>
       </view>
 
       <view class="field">

@@ -18,6 +18,7 @@ SRC_DIR = os.path.join(ROOT, ".tmp-avatars")
 OUT_DIR = os.path.join(ROOT, "miniapp", "src", "static", "avatars")
 
 # 顺序即选择面板里的排列顺序，改顺序只要调这里
+# av01-av08 是最早那批（数据库里已经有人用了，顺序不能动，否则用户头像会变）
 SOURCES = [
     ("av01", "Square_1_1_avatar_illustration_2026-11-05T03-16-44.png"),  # 短发女生抱钱包
     ("av02", "Square_1_1_avatar_illustration_2026-11-05T03-19-49.png"),  # 耳机男生
@@ -27,6 +28,19 @@ SOURCES = [
     ("av06", "Square_1_1_avatar_illustration_2026-11-05T03-18-42.png"),  # 抱笔记本男生
     ("av07", "Square_1_1_avatar_illustration_2026-11-05T03-18-53.png"),  # 双马尾蛋糕
     ("av08", "Square_1_1_avatar_illustration_2026-11-05T03-20-13.png"),  # 贝雷帽抱书
+    # —— 以上 8 张之后新增到 20 张 ——
+    ("av09", "Square_1_1_avatar_illustration_2026-11-05T03-16-07.png"),  # 丸子头竖拇指
+    ("av10", "Square_1_1_avatar_illustration_2026-11-05T03-17-45.png"),  # 耳机男生看手机
+    ("av11", "Square_1_1_avatar_illustration_2026-11-05T03-18-09.png"),  # 扎发女生奶茶
+    ("av12", "Square_1_1_avatar_illustration_2026-11-05T03-18-20.png"),  # 卷发男生纸袋
+    ("av13", "Square_1_1_avatar_illustration_2026-11-05T03-19-03.png"),  # 存钱罐女生（蓝）
+    ("av14", "Square_1_1_avatar_illustration_2026-11-05T03-16-57.png"),  # 短发女生红钱包
+    ("av15", "Match_the_illustration_style_o_2026-11-05T07-06-10.png"),  # 眼镜男抱保温杯
+    ("av16", "Match_the_illustration_style_o_2026-11-05T07-06-25.png"),  # 背包女生拿地图
+    ("av17", "Match_the_illustration_style_o_2026-11-05T07-06-51.png"),  # 女生抱尤克里里
+    ("av18", "Match_the_illustration_style_o_2026-11-05T07-07-06.png"),  # 针织帽男拿咖啡
+    ("av19", "Match_the_illustration_style_o_2026-11-05T07-07-28.png"),  # 马尾女生举手机拍照
+    ("av20", "Match_the_illustration_style_o_2026-11-05T07-08-16.png"),  # 短发女生拿拍立得
 ]
 
 SIZE = 224

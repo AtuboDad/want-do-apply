@@ -16,23 +16,32 @@
     </view>
 
     <view class="body">
-      <text class="title">{{ item.title }}</text>
-      <view class="price-row">
-        <text class="currency">¥</text>
-        <text class="price">{{ money(item.price) }}</text>
-        <text v-if="item.isTop === '1'" class="tag-top">置顶</text>
-      </view>
-      <text v-if="item.reason" class="reason ellipsis-2">{{ item.reason }}</text>
+      <view class="body-main">
+        <text class="title">{{ item.title }}</text>
+        <view class="price-row">
+          <text class="currency">¥</text>
+          <text class="price">{{ money(item.price) }}</text>
+          <text v-if="item.isTop === '1'" class="tag-top">置顶</text>
+        </view>
+        <text v-if="item.reason" class="reason ellipsis-2">{{ item.reason }}</text>
 
-      <view v-if="item.imageList && item.imageList.length" class="images">
-        <image
-          v-for="(img, i) in item.imageList.slice(0, 3)"
-          :key="i"
-          class="thumb"
-          :src="fullUrl(img)"
-          mode="aspectFill"
-        />
-        <view v-if="item.imageList.length > 3" class="more">+{{ item.imageList.length - 3 }}</view>
+        <view v-if="item.imageList && item.imageList.length" class="images">
+          <image
+            v-for="(img, i) in item.imageList.slice(0, 3)"
+            :key="i"
+            class="thumb"
+            :src="fullUrl(img)"
+            mode="aspectFill"
+          />
+          <view v-if="item.imageList.length > 3" class="more">+{{ item.imageList.length - 3 }}</view>
+        </view>
+      </view>
+      <!-- 围观：从「更多」里拎出来，一眼能点 -->
+      <view class="fav" :class="{ on: item.favorited }" @tap.stop="toggleFav">
+        <view class="eye">
+          <view class="pupil" />
+        </view>
+        <text class="fav-text">{{ item.favorited ? '已围观' : '围观' }}</text>
       </view>
     </view>
 
@@ -73,7 +82,7 @@ import type { OrderItem } from '../api/types'
 
 const props = defineProps<{ item: OrderItem }>()
 
-const emit = defineEmits<{ (e: 'open', id: number): void }>()
+const emit = defineEmits<{ (e: 'open', id: number | string): void; (e: 'favorite', item: OrderItem): void }>()
 
 /** 单人审批：一个人表态就出结果；多人审批：时长内攒意见 */
 const modeLabel = computed(() => (props.item.approveMode === '0' ? '单人审批' : '多人审批'))
@@ -81,6 +90,11 @@ const modeLabel = computed(() => (props.item.approveMode === '0' ? '单人审批
 function go() {
   // 由所在页面决定怎么展示详情（现在是弹出圆角弹层，不再是整页跳转）
   emit('open', props.item.id)
+}
+
+/** 围观 / 取消围观：卡片上一眼可见，不用再翻「更多」 */
+function toggleFav() {
+  emit('favorite', props.item)
 }
 </script>
 
@@ -156,6 +170,67 @@ function go() {
 
 .body {
   margin-top: 24rpx;
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.body-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 围观胶囊：浅绿底墨绿字，已围观时反白，和参考图一致 */
+.fav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 10rpx 22rpx;
+  border-radius: 999rpx;
+  background: #edf3ee;
+  margin-top: 2rpx;
+}
+
+.fav .eye {
+  width: 26rpx;
+  height: 18rpx;
+  border: 3rpx solid #2f5a4c;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.fav .pupil {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #2f5a4c;
+}
+
+.fav .fav-text {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #2f5a4c;
+  line-height: 1;
+}
+
+.fav.on {
+  background: #2f5a4c;
+}
+
+.fav.on .eye {
+  border-color: #fff;
+}
+
+.fav.on .pupil {
+  background: #fff;
+}
+
+.fav.on .fav-text {
+  color: #fff;
 }
 
 .title {

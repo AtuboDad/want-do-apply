@@ -35,7 +35,7 @@
     </view>
 
     <view class="list">
-      <OrderCard v-for="item in list" :key="item.id" :item="item" @open="openSheet" />
+      <OrderCard v-for="item in list" :key="item.id" :item="item" @open="openSheet" @favorite="handleFavorite" />
 
       <Empty v-if="!loading && list.length === 0" text="广场还没人发单，来当第一个" emoji="🛒" />
 
@@ -55,7 +55,7 @@ import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
 import OrderCard from '../../components/OrderCard.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
-import { getSquare } from '../../api/order'
+import { getSquare, toggleFavorite } from '../../api/order'
 import { ensureLogin } from '../../utils/auth'
 import { takePendingOpenOrder } from '../../utils/order-sheet'
 import type { OrderItem } from '../../api/types'
@@ -82,9 +82,20 @@ const loading = ref(false)
 const sheetVisible = ref(false)
 /** 弹层打开时锁页面滚动（仅小程序生效） */
 const pageStyle = pageStyleWhen(() => sheetVisible.value)
-const sheetOrderId = ref(0)
+const sheetOrderId = ref<number | string>(0)
 
-function openSheet(id: number) {
+/** 卡片上的围观按钮：点一下关注，再点取消 */
+async function handleFavorite(item: OrderItem) {
+  try {
+    const fav = await toggleFavorite(item.id)
+    item.favorited = fav
+    uni.showToast({ title: fav ? '开始围观' : '取消围观', icon: 'none' })
+  } catch (e) {
+    // 提示已在 request 里统一弹过
+  }
+}
+
+function openSheet(id: number | string) {
   sheetOrderId.value = id
   sheetVisible.value = true
 }

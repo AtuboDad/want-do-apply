@@ -49,7 +49,7 @@ const loading = ref(false)
 const sheetVisible = ref(false)
 /** 弹层打开时锁页面滚动（仅小程序生效） */
 const pageStyle = pageStyleWhen(() => sheetVisible.value)
-const sheetOrderId = ref(0)
+const sheetOrderId = ref<number | string>(0)
 
 function openSheet(id: number) {
   sheetOrderId.value = id

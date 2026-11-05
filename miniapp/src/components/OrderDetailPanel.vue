@@ -55,6 +55,16 @@
           </view>
         </view>
 
+        <!-- 商品详情：理由要排在批条前面，让审批人先看理由再表态，别被别人的意见带节奏 -->
+        <view class="card">
+          <text class="card-title">想买的理由</text>
+          <text class="para">{{ order.reason }}</text>
+          <view v-if="order.substitute" class="sub-block">
+            <text class="para-label">有没有替代品</text>
+            <text class="para">{{ order.substitute }}</text>
+          </view>
+        </view>
+
         <!-- 回应 -->
         <view class="card">
           <view class="card-head">
@@ -96,16 +106,6 @@
           </view>
 
           <Empty v-if="votes.length === 0" text="还没人表态，快去摇人" emoji="🌿" />
-        </view>
-
-        <!-- 商品详情 -->
-        <view class="card">
-          <text class="card-title">想买的理由</text>
-          <text class="para">{{ order.reason }}</text>
-          <view v-if="order.substitute" class="sub-block">
-            <text class="para-label">有没有替代品</text>
-            <text class="para">{{ order.substitute }}</text>
-          </view>
         </view>
 
         <!-- 讨论 -->

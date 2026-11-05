@@ -87,7 +87,7 @@ create table apply_order (
     group_id          bigint(20)      default null               comment '审批群ID（为空表示公开广场）',
     title             varchar(100)    not null                   comment '商品名称',
     price             decimal(10,2)   default 0.00               comment '商品价格',
-    reason            varchar(500)    default ''                 comment '购买理由',
+    reason            varchar(1000)   default ''                 comment '购买理由',
     substitute        varchar(200)    default ''                 comment '替代品（为空表示没有）',
     extra_note        varchar(500)    default ''                 comment '发起人补充说明',
     images            varchar(1000)   default ''                 comment '图片，多个用逗号分隔',
