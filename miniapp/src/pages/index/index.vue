@@ -37,7 +37,15 @@
     <view class="list">
       <OrderCard v-for="item in list" :key="item.id" :item="item" @open="openSheet" />
 
-      <Empty v-if="!loading && list.length === 0" text="广场还没人发单，来当第一个" emoji="🛒" />
+      <Empty v-if="!loading && list.length === 0 && !loadError" text="广场还没人发单，来当第一个" emoji="🛒" />
+
+      <!-- 请求失败要说清楚是「连不上」还是「真没数据」，否则页面空着根本没法查 -->
+      <view v-else-if="!loading && list.length === 0" class="load-fail">
+        <text class="fail-title">没拉到数据</text>
+        <text class="fail-url">接口地址：{{ apiBase }}</text>
+        <text class="fail-msg">{{ loadError }}</text>
+        <view class="fail-btn" @tap="load(true)">重新加载</view>
+      </view>
 
       <view v-if="list.length > 0" class="footer-tip">
         {{ hasMore ? '上拉加载更多' : '— 到底了 —' }}
@@ -57,6 +65,7 @@ import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
 import { getSquare } from '../../api/order'
 import { ensureLogin } from '../../utils/auth'
+import { BASE_URL } from '../../utils/config'
 import { takePendingOpenOrder } from '../../utils/order-sheet'
 import type { OrderItem } from '../../api/types'
 
@@ -102,6 +111,15 @@ function handleSheetClose(changed?: boolean) {
 /** 只有最新一次请求的结果才落地，见 mine 页同名变量的说明 */
 let reqSeq = 0
 
+/** 列表为空时用来区分「真没单」和「请求没成功」 */
+const loadError = ref('')
+const apiBase = BASE_URL || '（H5 走代理）'
+
+function errText(e: any): string {
+  const raw = e?.errMsg || e?.message || e
+  return typeof raw === 'string' ? raw : '未知错误'
+}
+
 async function load(reset = false) {
   if (reset) {
     pageNum.value = 1
@@ -117,6 +135,7 @@ async function load(reset = false) {
     const res = await getSquare({ sort: sort.value, pageNum: pageNum.value, pageSize })
     if (seq !== reqSeq) return
     const rows = res.rows || []
+    loadError.value = ''
     if (reset) {
       list.value = rows
     } else {
@@ -126,7 +145,8 @@ async function load(reset = false) {
     hasMore.value = rows.length >= pageSize
     pageNum.value += 1
   } catch (e) {
-    // 错误已在 request 中提示
+    // request 里已弹过 toast，这里记下来给空态展示
+    if (seq === reqSeq) loadError.value = errText(e)
   } finally {
     if (seq === reqSeq) loading.value = false
   }
@@ -283,5 +303,38 @@ onReachBottom(() => {
   font-size: 22rpx;
   color: #b3ada1;
   padding: 30rpx 0 20rpx;
+}
+
+/* 拉取失败：把地址和原因摊开，别再让人对着空列表猜 */
+.load-fail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  padding: 120rpx 48rpx 60rpx;
+}
+
+.fail-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2f5a4c;
+}
+
+.fail-url,
+.fail-msg {
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #9a9488;
+  text-align: center;
+  word-break: break-all;
+}
+
+.fail-btn {
+  margin-top: 16rpx;
+  padding: 14rpx 44rpx;
+  border-radius: 999rpx;
+  background: #2f5a4c;
+  color: #fff;
+  font-size: 26rpx;
 }
 </style>
