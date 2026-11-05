@@ -88,8 +88,16 @@
     </scroll-view>
 
     <view class="list">
-      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" @favorite="handleFavorite" />
+      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" />
       <Empty v-if="!loading && orders.length === 0" :text="emptyText" emoji="📭" />
+      <!-- 空列表时把「当前登录的是谁」亮出来：
+           上一版出现过「数据库里明明有 3 单，页面却空着」——
+           多半是 token 对应的账号和页面上显示的账号不是同一个（换设备 / 清缓存 / 调试号残留），
+           藏起来就只能猜。 -->
+      <view v-if="!loading && orders.length === 0" class="who">
+        <text class="who-text">当前账号：{{ user?.nickName || '未登录' }} · ID 尾号 {{ uidTail }}</text>
+        <text class="who-link" @tap="relogin">不是这个号？点这里重新登录</text>
+      </view>
       <view v-if="orders.length > 0" class="footer-tip">
         {{ hasMore ? '上拉加载更多' : '— 到底了 —' }}
       </view>
@@ -199,13 +207,13 @@ import OrderCard from '../../components/OrderCard.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
 import VipBadge from '../../components/VipBadge.vue'
-import { getMine, getProfile, toggleFavorite } from '../../api/order'
+import { getMine, getProfile } from '../../api/order'
 import { getUnread } from '../../api/group'
-import { updateProfile } from '../../api/auth'
+import { login, refreshMe, updateProfile } from '../../api/auth'
 import { uploadFile } from '../../utils/request'
 import { avatarUrl, isVipAvatar, PRESET_AVATARS, VIP_AVATARS, presetAvatarPath, presetAvatarValue, shouldShowVip } from '../../utils/avatar'
 import { money } from '../../utils/format'
-import { userStore } from '../../store/user'
+import { clearAuth, userStore } from '../../store/user'
 import { ensureLogin } from '../../utils/auth'
 import type { OrderItem } from '../../api/types'
 import type { ProfileData } from '../../api/order'
@@ -246,6 +254,9 @@ const loading = ref(false)
 
 const user = computed(() => userStore.user)
 
+/** 微信 id 是雪花号，前 16 位都一样，看尾 4 位才分得清是谁 */
+const uidTail = computed(() => String(user.value?.id || '').slice(-4) || '----')
+
 /** 自己头像上的角标：会员头像 + 自己没关开关 */
 const showMyVip = computed(() => shouldShowVip(user.value?.avatar, user.value?.showVip))
 
@@ -271,17 +282,7 @@ const sheetVisible = ref(false)
 const pageStyle = pageStyleWhen(() => sheetVisible.value || editVisible.value)
 const sheetOrderId = ref<number | string>(0)
 
-/** 卡片上的围观按钮：点一下关注，再点取消 */
-async function handleFavorite(item: OrderItem) {
-  try {
-    const fav = await toggleFavorite(item.id)
-    item.favorited = fav
-    uni.showToast({ title: fav ? '开始围观' : '取消围观', icon: 'none' })
-  } catch (e) {
-    // 提示已在 request 里统一弹过
-  }
-}
-
+/** 卡片上的围观按钮已挪到审批详情里，这里不再处理 */
 function openSheet(id: number | string) {
   sheetOrderId.value = id
   sheetVisible.value = true
@@ -476,7 +477,33 @@ async function saveProfile() {
   await loadOrders(true)
 }
 
-onShow(() => {
+/**
+ * 重新登录（换回自己的账号）。
+ *
+ * 调试时 storage 里可能残留别的账号的 token（H5 假登录、清缓存前后混用），
+ * 表现就是「我的」空着、数据库里却有单。清干净再登一遍最省事。
+ */
+async function relogin() {
+  clearAuth()
+  uni.showLoading({ title: '正在重新登录' })
+  try {
+    await login()
+    await refreshMe()
+    uni.showToast({ title: `已登录：${userStore.user?.nickName || '新账号'}`, icon: 'none' })
+    await loadProfile()
+    await loadOrders(true)
+  } catch (e) {
+    // 失败原因 request 里已经提示过
+  } finally {
+    uni.hideLoading()
+  }
+}
+
+onShow(async () => {
+  // 先用 token 换一次「我是谁」：storage 里的 user 可能是旧账号，
+  // 那样页面显示 A、查询用的是 B 的 token，看起来就是「数据凭空没了」。
+  await ensureLogin()
+  refreshMe().catch(() => {})
   loadProfile()
   loadOrders(true)
 })
@@ -751,6 +778,28 @@ onReachBottom(() => {
   font-size: 22rpx;
   color: #b3ada1;
   padding: 24rpx 0;
+}
+
+/* 空列表时的账号自查：低调一点，别抢「空状态」的戏 */
+.who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  margin-top: 8rpx;
+  padding: 0 40rpx 40rpx;
+}
+
+.who-text {
+  font-size: 22rpx;
+  color: #b3ada1;
+  text-align: center;
+}
+
+.who-link {
+  font-size: 22rpx;
+  color: #2f5a4c;
+  text-decoration: underline;
 }
 
 /* ---------- 资料弹层 ---------- */

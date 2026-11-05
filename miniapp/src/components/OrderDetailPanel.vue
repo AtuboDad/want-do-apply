@@ -150,6 +150,16 @@
 
     <!-- 底部操作 -->
     <view v-if="order" class="action-bar">
+      <!-- 围观：从列表卡片挪到详情里，别人的单才显示 -->
+      <view v-if="!order.mine" class="fav-row">
+        <view class="fav-btn" :class="{ on: order.favorited }" @tap="toggleFav">
+          <view class="eye">
+            <view class="pupil" />
+          </view>
+          <text class="fav-label">{{ order.favorited ? '已围观' : '围观这单' }}</text>
+          <text class="fav-tip">{{ order.favorited ? '出结果会通知你' : '不表态，只看结果' }}</text>
+        </view>
+      </view>
       <!-- 发起人：撤回 / 补充说明 / 提前结束 -->
       <view v-if="order.mine && order.status === '0'" class="row-3">
         <button class="btn ghost" @tap="cancelMine">撤回审批</button>
@@ -520,19 +530,35 @@ function preview(i: number) {
   uni.previewImage({ urls, current: i })
 }
 
+/**
+ * 围观 / 取消围观。
+ *
+ * 这个入口原来挂在列表卡片上，现在收进详情底部 —— 卡片太重，
+ * 而且围观本来就是「看完再决定」的动作。
+ */
+async function toggleFav() {
+  if (!order.value) return
+  try {
+    const fav = await toggleFavorite(props.orderId)
+    order.value.favorited = fav
+    // 列表里的「我围观的」也要跟着变
+    dirty.value = true
+    uni.showToast({ title: fav ? '开始围观，出结果会通知你' : '已取消围观', icon: 'none' })
+  } catch (e) {
+    // 提示已在 request 里统一弹过
+  }
+}
+
 /** 供弹层头部「···」调用 */
 async function onMore() {
-  const items = [order.value?.favorited ? '取消围观' : '围观这单', '举报这个审批']
+  const items = ['举报这个审批']
   if (order.value?.mine) items.push('删除这单')
   uni.showActionSheet({
     itemList: items,
     success: async (res) => {
       if (res.tapIndex === 0) {
-        const fav = await toggleFavorite(props.orderId)
-        uni.showToast({ title: fav ? '开始围观' : '取消围观', icon: 'none' })
-      } else if (res.tapIndex === 1) {
         doReport('1')
-      } else if (res.tapIndex === 2) {
+      } else if (res.tapIndex === 1) {
         await removeOrder(props.orderId)
         uni.showToast({ title: '已删除', icon: 'none' })
         setTimeout(() => emit('close'), 600)
@@ -1064,6 +1090,73 @@ defineExpose({ onMore, reload: load, wasChanged: () => dirty.value })
   padding: 18rpx 24rpx 22rpx;
   box-shadow: 0 -4rpx 18rpx rgba(45, 58, 51, 0.05);
   flex-shrink: 0;
+}
+
+/* 围观：整条是个浅绿胶囊，点一下切换；已围观反白成墨绿 */
+.fav-row {
+  margin-bottom: 16rpx;
+}
+
+.fav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  height: 72rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  background: #edf3ee;
+}
+
+.fav-btn .eye {
+  width: 28rpx;
+  height: 20rpx;
+  border: 3rpx solid #2f5a4c;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.fav-btn .pupil {
+  width: 9rpx;
+  height: 9rpx;
+  border-radius: 50%;
+  background: #2f5a4c;
+}
+
+.fav-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #2f5a4c;
+  line-height: 1;
+}
+
+.fav-tip {
+  font-size: 22rpx;
+  color: #7d8f84;
+  line-height: 1;
+}
+
+.fav-btn.on {
+  background: #2f5a4c;
+}
+
+.fav-btn.on .eye {
+  border-color: #fff;
+}
+
+.fav-btn.on .pupil {
+  background: #fff;
+}
+
+.fav-btn.on .fav-label {
+  color: #fff;
+}
+
+.fav-btn.on .fav-tip {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .row-3 {

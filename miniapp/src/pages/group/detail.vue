@@ -28,7 +28,7 @@
         </view>
       </view>
 
-      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" @favorite="handleFavorite" />
+      <OrderCard v-for="o in orders" :key="o.id" :item="o" @open="openSheet" />
       <Empty v-if="orders.length === 0" text="群里还没人发单" emoji="🧾" />
 
       <view v-if="orders.length > 0" class="footer-tip">
@@ -55,7 +55,6 @@ import OrderCard from '../../components/OrderCard.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
 import { getGroup, getGroupOrders, quitGroup, dissolveGroup } from '../../api/group'
-import { toggleFavorite } from '../../api/order'
 import { ensureLogin } from '../../utils/auth'
 import type { GroupItem, OrderItem } from '../../api/types'
 
@@ -71,17 +70,6 @@ const sheetVisible = ref(false)
 /** 弹层打开时锁页面滚动（仅小程序生效） */
 const pageStyle = pageStyleWhen(() => sheetVisible.value)
 const sheetOrderId = ref<number | string>(0)
-
-/** 卡片上的围观按钮：点一下关注，再点取消 */
-async function handleFavorite(item: OrderItem) {
-  try {
-    const fav = await toggleFavorite(item.id)
-    item.favorited = fav
-    uni.showToast({ title: fav ? '开始围观' : '取消围观', icon: 'none' })
-  } catch (e) {
-    // 提示已在 request 里统一弹过
-  }
-}
 
 function openSheet(id: number | string) {
   sheetOrderId.value = id
