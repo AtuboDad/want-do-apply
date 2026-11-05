@@ -18,7 +18,7 @@
             <text v-if="order.isTop === '1'" class="tag-top">置顶</text>
           </view>
           <view class="author">
-            <image class="avatar" :src="fullUrl(order.userAvatar) || defaultAvatar" mode="aspectFill" />
+            <image class="avatar" :src="avatarUrl(order.userAvatar)" mode="aspectFill" />
             <text class="a-name">{{ order.userNickName || '匿名审批员' }}</text>
             <text class="a-time">{{ fromNow(order.createTime) }}</text>
             <text v-if="order.groupName" class="a-group">{{ order.groupName }}</text>
@@ -109,7 +109,7 @@
             </view>
           </view>
           <view v-for="c in comments" :key="c.id" class="comment">
-            <image class="c-avatar" :src="fullUrl(c.userAvatar) || defaultAvatar" mode="aspectFill" />
+            <image class="c-avatar" :src="avatarUrl(c.userAvatar)" mode="aspectFill" />
             <view class="grow">
               <view class="c-head">
                 <text class="c-name">{{ c.userNickName || '匿名' }}</text>
@@ -237,6 +237,7 @@ import {
 import { submitVote, likeVote, addComment, getComments } from '../api/vote'
 import { report } from '../api/group'
 import { fullUrl } from '../utils/request'
+import { avatarUrl } from '../utils/avatar'
 import {
   fromNow,
   money,
@@ -253,9 +254,6 @@ const props = defineProps<{ orderId: number }>()
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
-
-const defaultAvatar =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjUwIiBmaWxsPSIjRkVFRkU2Ii8+PGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTYiIGZpbGw9IiNGMEM4QTQiLz48cGF0aCBkPSJNMjIgODJjMC0xNiAxMi0yOCAyOC0yOHMyOCAxMiAyOCAyOCIgZmlsbD0iI0YwQzhBNCIvPjwvc3ZnPg=='
 
 const order = ref<OrderItem | null>(null)
 const votes = ref<VoteItem[]>([])

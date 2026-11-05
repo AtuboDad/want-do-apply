@@ -87,13 +87,18 @@ want-do-apply/
 │       ├── components/                  # NavBar / Empty / OrderCard / VoteCard / OrderSheet / OrderDetailPanel
 │       ├── pages/                       # 广场 / 详情 / 发布 / 审批群 / 我的 / 通知
 │       ├── static/tabbar/               # tabBar 图标（81x81 PNG，灰/橙两态）
+│       ├── static/avatars/              # 预设头像（萌粒风插画，224x224 JPG，8 个）
 │       ├── store/user.ts
-│       └── utils/                       # request / auth / config / format
-├── scripts/                             # 启动脚本、tabBar 图标生成器
+│       └── utils/                       # request / auth / config / format / avatar / scroll-lock
+├── scripts/                             # 启动脚本、tabBar 图标与预设头像生成器
 └── docs/                                # 建库、探活、接口冒烟脚本
 ```
 
 > tabBar 图标由 `scripts/gen_tabbar_icons.py`（Pillow 绘制）生成，改形状/配色后重跑即可，会同时输出一张 2×4 的预览图。
+>
+> 预设头像由 `scripts/gen_avatar_presets.py` 从 `.tmp-avatars/` 的原图裁切压缩而来（原图不入库）。
+> 头像字段有两种写法：`preset:av03`（我们画的，前端换算成 `/static/avatars/av03.jpg`）和 `/upload/xxx.jpg`（用户用微信头像换的）。
+> 渲染一律走 `utils/avatar.ts` 的 `avatarUrl()`，不要自己拼 `fullUrl`；后端 `updateProfile` 只接受这两种 + http(s) 直链。
 
 ---
 
@@ -279,7 +284,7 @@ apply:
 | POST | `/app/auth/login` | 微信 code 登录，返回 token |
 | GET | `/app/auth/config` | 小程序端开关配置 |
 | GET | `/app/auth/me` | 我的信息 |
-| PUT | `/app/auth/me` | 修改资料 |
+| PUT | `/app/auth/profile` | 改昵称 / 头像（`nickName`、`avatar` 走 query，头像支持 `preset:av03` 预设与 `/upload/...`） |
 | GET | `/app/order/square` | 广场列表（latest / hot / pending） |
 | POST | `/app/order` | 发起审批单 |
 | GET | `/app/order/{id}` | 审批单详情（含 myVoted / favorited / mine） |

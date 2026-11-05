@@ -1,5 +1,5 @@
 <template>
-  <view v-if="mounted" class="os-mask" :class="{ show: shown }" @tap="close">
+  <view v-if="mounted" ref="maskRef" class="os-mask" :class="{ show: shown }" @tap="close">
     <!-- 只在顶部空白区拦截滑动，避免影响下面 sheet 里 scroll-view 的滚动 -->
     <view class="os-block" @touchmove.stop.prevent />
     <view class="os-sheet" :class="{ show: shown }" @tap.stop>
@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 import OrderDetailPanel from './OrderDetailPanel.vue'
+import { lockPageScroll, unlockPageScroll, forwardWheelToSheet } from '../utils/scroll-lock'
 
 const props = defineProps<{
   visible: boolean
@@ -39,8 +40,60 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 const mounted = ref(false)
 const shown = ref(false)
 const panelRef = ref<InstanceType<typeof OrderDetailPanel> | null>(null)
+const maskRef = ref<unknown>(null)
 
 let timer: ReturnType<typeof setTimeout> | null = null
+/** 快速开关时 lock/unlock 必须成对且幂等，否则引用计数会漏加漏减 */
+let pageLocked = false
+
+function lockPage() {
+  if (pageLocked) return
+  pageLocked = true
+  lockPageScroll()
+}
+
+function unlockPage() {
+  if (!pageLocked) return
+  pageLocked = false
+  unlockPageScroll()
+}
+
+/**
+ * H5 才能拿到真实 DOM（小程序端 ref 不是元素，也不会走这段）。
+ * 滚轮统一由这里接管，见 utils/scroll-lock.ts 的说明。
+ */
+let wheelEl: HTMLElement | null = null
+
+function maskElement(): HTMLElement | null {
+  const r = maskRef.value as { $el?: HTMLElement } | HTMLElement | null
+  if (!r) return null
+  return (r as { $el?: HTMLElement }).$el || (r as HTMLElement)
+}
+
+function onWheel(e: WheelEvent) {
+  forwardWheelToSheet(wheelEl, e)
+  // 必须阻止默认，否则滚轮还是会漏到底层页面
+  e.preventDefault()
+}
+
+function bindWheel() {
+  // #ifdef H5
+  const el = maskElement()
+  if (!el || wheelEl === el) return
+  unbindWheel()
+  wheelEl = el
+  el.addEventListener('wheel', onWheel, { passive: false })
+  // #endif
+}
+
+function unbindWheel() {
+  // #ifdef H5
+  if (wheelEl) {
+    wheelEl.removeEventListener('wheel', onWheel)
+    wheelEl = null
+  }
+  // #endif
+}
 
 /**
  * tabBar 是小程序的原生层，永远压在普通元素之上，
@@ -66,25 +119,33 @@ watch(
     if (visible) {
       mounted.value = true
       toggleTabBar(false)
+      lockPage()
       // 等一帧再切 class，否则 transition 不会触发
       await nextTick()
+      bindWheel()
       timer = setTimeout(() => {
         shown.value = true
       }, 20)
     } else {
       shown.value = false
       timer = setTimeout(() => {
+        unbindWheel()
         mounted.value = false
         toggleTabBar(true)
+        unlockPage()
       }, 300)
     }
   },
   { immediate: true }
 )
 
-// 兜底：弹层没走正常关闭流程就被卸载时，别把 tabBar 留在隐藏状态
+// 兜底：弹层没走正常关闭流程就被卸载时，别把 tabBar 和页面滚动留在锁定状态
 onUnmounted(() => {
-  if (mounted.value) toggleTabBar(true)
+  unbindWheel()
+  if (mounted.value) {
+    toggleTabBar(true)
+    unlockPage()
+  }
 })
 
 function close() {

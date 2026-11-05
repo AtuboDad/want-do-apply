@@ -127,10 +127,31 @@ public class AppAuthService {
         if (StringUtils.isBlank(nickName) && StringUtils.isBlank(avatar)) {
             return;
         }
+        if (StringUtils.isNotBlank(avatar) && !isAllowedAvatar(avatar)) {
+            throw new ServiceException("头像地址不合法");
+        }
         appUserMapper.update(null, Wrappers.<AppUser>lambdaUpdate()
             .set(StringUtils.isNotBlank(nickName), AppUser::getNickName, nickName)
             .set(StringUtils.isNotBlank(avatar), AppUser::getAvatar, avatar)
             .eq(AppUser::getId, uid));
+    }
+
+    /**
+     * 头像只接受三种形式：
+     * preset:av01 —— 我们自己的预设头像（前端读包内图片）
+     * /upload/xxx.jpg —— 用户上传/微信头像，落在本服务
+     * http(s)://... —— 微信头像直链
+     * 挡住任意字符串写库，也避免出现 javascript: 之类的脏值。
+     */
+    private boolean isAllowedAvatar(String avatar) {
+        if (avatar.length() > 255) {
+            return false;
+        }
+        if (avatar.startsWith("preset:")) {
+            String id = avatar.substring("preset:".length());
+            return StringUtils.isNotBlank(id) && id.matches("[A-Za-z0-9_-]{1,32}");
+        }
+        return avatar.startsWith("/upload/") || avatar.startsWith("http://") || avatar.startsWith("https://");
     }
 
     // ==================== 管理端 ====================

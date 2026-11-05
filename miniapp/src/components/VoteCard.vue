@@ -1,7 +1,7 @@
 <template>
   <view class="vote-card">
     <view class="head">
-      <image class="avatar" :src="fullUrl(item.userAvatar) || defaultAvatar" mode="aspectFill" />
+      <image class="avatar" :src="avatarUrl(item.userAvatar)" mode="aspectFill" />
       <view class="grow">
         <text class="name">{{ item.userNickName || '匿名审批员' }}</text>
         <text class="time">{{ fromNow(item.createTime) }}</text>
@@ -25,13 +25,11 @@
 <script setup lang="ts">
 import { fullUrl } from '../utils/request'
 import { fromNow } from '../utils/format'
+import { avatarUrl } from '../utils/avatar'
 import type { VoteItem } from '../api/types'
 
 const props = defineProps<{ item: VoteItem }>()
 const emit = defineEmits<{ (e: 'like', id: number): void }>()
-
-const defaultAvatar =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjUwIiBmaWxsPSIjRkVFRkU2Ii8+PGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTYiIGZpbGw9IiNGMEM4QTQiLz48cGF0aCBkPSJNMjIgODJjMC0xNiAxMi0yOCAyOC0yOHMyOCAxMiAyOCAyOCIgZmlsbD0iI0YwQzhBNCIvPjwvc3ZnPg=='
 
 function onLike() {
   emit('like', props.item.id)

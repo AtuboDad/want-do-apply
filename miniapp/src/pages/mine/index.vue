@@ -3,7 +3,7 @@
     <view class="hero">
       <view class="status-bar" :style="{ height: statusBarHeight + 'px' }" />
       <view class="profile">
-        <image class="avatar" :src="fullUrl(user?.avatar) || defaultAvatar" mode="aspectFill" @tap="editProfile" />
+        <image class="avatar" :src="avatarUrl(user?.avatar)" mode="aspectFill" @tap="editProfile" />
         <view class="grow">
           <text class="nick">{{ user?.nickName || '审批员' }}</text>
           <view class="credit">
@@ -52,13 +52,35 @@
     </view>
 
     <!-- 编辑资料 -->
-    <view v-if="editVisible" class="mask" @tap="editVisible = false">
+    <view v-if="editVisible" class="mask" @tap="closeEdit">
       <view class="sheet" @tap.stop>
-        <text class="sheet-title">修改资料</text>
-        <button class="avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
-          <image class="avatar-preview" :src="editAvatar || defaultAvatar" mode="aspectFill" />
-          <text class="avatar-tip">点击更换头像</text>
+        <view class="sheet-head">
+          <text class="sheet-title">修改资料</text>
+          <text class="sheet-close" @tap="closeEdit">✕</text>
+        </view>
+
+        <view class="cur-avatar">
+          <image class="avatar-preview" :src="avatarUrl(editAvatar)" mode="aspectFill" />
+          <text class="avatar-tip">挑一个顺眼的形象</text>
+        </view>
+
+        <text class="block-label">我们画的</text>
+        <view class="avatar-grid">
+          <view
+            v-for="id in PRESET_AVATARS"
+            :key="id"
+            class="av-cell"
+            :class="{ on: editAvatar === presetAvatarValue(id) }"
+            @tap="pickPreset(id)"
+          >
+            <image class="av-img" :src="presetAvatarPath(id)" mode="aspectFill" />
+          </view>
+        </view>
+
+        <button class="wx-avatar" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+          或者用微信头像
         </button>
+
         <input
           class="sheet-input"
           type="nickname"
@@ -84,15 +106,13 @@ import Empty from '../../components/Empty.vue'
 import { getMine, getProfile } from '../../api/order'
 import { getUnread } from '../../api/group'
 import { refreshMe, updateProfile } from '../../api/auth'
-import { uploadFile, fullUrl } from '../../utils/request'
+import { uploadFile } from '../../utils/request'
+import { avatarUrl, PRESET_AVATARS, presetAvatarPath, presetAvatarValue } from '../../utils/avatar'
 import { money } from '../../utils/format'
 import { userStore } from '../../store/user'
 import { ensureLogin } from '../../utils/auth'
 import type { OrderItem } from '../../api/types'
 import type { ProfileData } from '../../api/order'
-
-const defaultAvatar =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjUwIiBmaWxsPSIjRkVFRkU2Ii8+PGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTYiIGZpbGw9IiNGMEM4QTQiLz48cGF0aCBkPSJNMjIgODJjMC0xNiAxMi0yOCAyOC0yOHMyOCAxMiAyOCAyOCIgZmlsbD0iI0YwQzhBNCIvPjwvc3ZnPg=='
 
 const statusBarHeight = ref(0)
 // #ifdef MP-WEIXIN
@@ -175,6 +195,27 @@ function editProfile() {
   editNick.value = user.value?.nickName || ''
   editAvatar.value = user.value?.avatar || ''
   editVisible.value = true
+  // tabBar 是原生层，不藏起来会压住弹层底部的保存按钮
+  toggleTabBar(false)
+}
+
+function closeEdit() {
+  editVisible.value = false
+  toggleTabBar(true)
+}
+
+function toggleTabBar(show: boolean) {
+  const opts = { animation: false, fail: () => {} }
+  if (show) {
+    uni.showTabBar(opts)
+  } else {
+    uni.hideTabBar(opts)
+  }
+}
+
+/** 选预设头像：存 preset:av03 这种标记，前端渲染走本地图片 */
+function pickPreset(id: string) {
+  editAvatar.value = presetAvatarValue(id)
 }
 
 function onNickInput(e: any) {
@@ -202,8 +243,11 @@ async function saveProfile() {
   }
   await updateProfile(editNick.value.trim(), editAvatar.value)
   editVisible.value = false
+  toggleTabBar(true)
   uni.showToast({ title: '已保存', icon: 'none' })
   await loadProfile()
+  // 列表里的作者头像也要跟着换，否则得手动下拉才看得到
+  await loadOrders(true)
 }
 
 onShow(() => {
@@ -371,7 +415,7 @@ onReachBottom(() => {
   background: #fff;
   border-top-left-radius: 32rpx;
   border-top-right-radius: 32rpx;
-  padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+  padding: 34rpx 32rpx calc(34rpx + env(safe-area-inset-bottom));
 }
 
 .sheet-title {
@@ -379,22 +423,33 @@ onReachBottom(() => {
   font-weight: 700;
 }
 
-.avatar-btn {
-  margin-top: 28rpx;
-  background: transparent;
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-close {
+  font-size: 30rpx;
+  color: #9aa0a6;
+  padding: 0 8rpx;
+}
+
+.cur-avatar {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10rpx;
-  padding: 0;
-  line-height: normal;
+  margin-top: 20rpx;
 }
 
 .avatar-preview {
-  width: 140rpx;
-  height: 140rpx;
+  width: 128rpx;
+  height: 128rpx;
   border-radius: 50%;
   background: #f5f5f7;
+  border: 4rpx solid #fff;
+  box-shadow: 0 6rpx 24rpx rgba(255, 107, 53, 0.18);
 }
 
 .avatar-tip {
@@ -402,17 +457,72 @@ onReachBottom(() => {
   color: #9aa0a6;
 }
 
-.sheet-input {
+.block-label {
+  display: block;
   margin-top: 24rpx;
+  font-size: 23rpx;
+  color: #9aa0a6;
+}
+
+/* 4 列：4×140 + 3×16 = 608rpx，排在 686rpx 的可用宽度里居中 */
+.avatar-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16rpx;
+  margin-top: 14rpx;
+}
+
+.av-cell {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #f7f7f9;
+  border: 4rpx solid transparent;
+}
+
+.av-cell.on {
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 4rpx rgba(255, 107, 53, 0.16);
+}
+
+.av-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wx-avatar {
+  margin-top: 24rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 999rpx;
+  background: #f5f5f7;
+  color: #5a5a5a;
+  font-size: 26rpx;
+  font-weight: 500;
+  padding: 0;
+}
+
+.wx-avatar::after {
+  border: none;
+}
+
+.sheet-input {
+  margin-top: 22rpx;
+  height: 84rpx;
+  line-height: 84rpx;
   background: #f7f7f9;
   border-radius: 16rpx;
-  padding: 24rpx;
+  padding: 0 24rpx;
   font-size: 28rpx;
   text-align: center;
 }
 
 .submit {
-  margin-top: 32rpx;
+  margin-top: 26rpx;
   height: 88rpx;
   line-height: 88rpx;
   border-radius: 999rpx;

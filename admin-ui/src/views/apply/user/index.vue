@@ -33,7 +33,10 @@
         <el-table-column label="用户" min-width="200">
           <template #default="{ row }">
             <div class="user-cell">
-              <el-avatar :size="34" :src="row.avatar" />
+              <!-- 预设头像（preset:av01）的图片在小程序包内，后台取不到，用昵称首字兜底 -->
+              <el-avatar :size="34" :src="presetAvatarSrc(row.avatar)">
+                {{ (row.nickName || '?').slice(0, 1) }}
+              </el-avatar>
               <div>
                 <div class="nick">{{ row.nickName || '匿名用户' }}</div>
                 <div class="sub">ID {{ row.id }}</div>
@@ -149,6 +152,11 @@ function creditType(score?: number) {
   if (n >= 90) return 'success';
   if (n >= 60) return 'warning';
   return 'danger';
+}
+
+/** 预设头像是小程序包内资源，后台拿不到地址，返回空让 el-avatar 走昵称首字 */
+function presetAvatarSrc(avatar?: string) {
+  return avatar && avatar.startsWith('preset:') ? '' : avatar;
 }
 
 async function getList() {

@@ -56,3 +56,5 @@ application-local.yml
 # ===== 验证工具产生的临时文件 =====
 .playwright-cli/
 scripts/_tabbar_preview.png
+# 头像生成用的原图（10MB 级），成品在 miniapp/src/static/avatars/
+.tmp-avatars/

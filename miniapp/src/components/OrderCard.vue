@@ -1,7 +1,7 @@
 <template>
   <view class="order-card" @tap="go">
     <view class="head">
-      <image class="avatar" :src="fullUrl(item.userAvatar) || defaultAvatar" mode="aspectFill" />
+      <image class="avatar" :src="avatarUrl(item.userAvatar)" mode="aspectFill" />
       <view class="grow">
         <view class="name-row">
           <text class="name">{{ item.userNickName || '匿名审批员' }}</text>
@@ -65,15 +65,13 @@
 
 <script setup lang="ts">
 import { fullUrl } from '../utils/request'
+import { avatarUrl } from '../utils/avatar'
 import { fromNow, money, countdown, statusText, statusColor } from '../utils/format'
 import type { OrderItem } from '../api/types'
 
 const props = defineProps<{ item: OrderItem }>()
 
 const emit = defineEmits<{ (e: 'open', id: number): void }>()
-
-const defaultAvatar =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjUwIiBmaWxsPSIjRkVFRkU2Ii8+PGNpcmNsZSBjeD0iNTAiIGN5PSIzOCIgcj0iMTYiIGZpbGw9IiNGMEM4QTQiLz48cGF0aCBkPSJNMjIgODJjMC0xNiAxMi0yOCAyOC0yOHMyOCAxMiAyOCAyOCIgZmlsbD0iI0YwQzhBNCIvPjwvc3ZnPg=='
 
 function go() {
   // 由所在页面决定怎么展示详情（现在是弹出圆角弹层，不再是整页跳转）

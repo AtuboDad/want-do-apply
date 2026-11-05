@@ -108,13 +108,25 @@ check("profile", r.get("code") == 200, r.get("msg", ""))
 if r.get("code") == 200:
     check("voteTotal>=1", (r["data"].get("voteTotal") or 0) >= 1, str(r["data"].get("voteTotal")))
 
-print("== 9. 通知 ==")
+print("== 9. 头像设置 ==")
+# 预设头像存 preset:av05 这种标记，前端自己换成包内图片
+r = call("PUT", "/app/auth/profile?avatar=preset%3Aav05", None, bob)
+check("设置预设头像", r.get("code") == 200, r.get("msg", ""))
+r = call("GET", "/app/auth/me", None, bob)
+check("头像已保存", (r.get("data") or {}).get("avatar") == "preset:av05", str((r.get("data") or {}).get("avatar")))
+# 任意字符串不许写库
+r = call("PUT", "/app/auth/profile?avatar=javascript%3Aalert(1)", None, bob)
+check("非法头像被拒", r.get("code") != 200, r.get("msg", ""))
+r = call("GET", "/app/auth/me", None, bob)
+check("被拒后没写库", (r.get("data") or {}).get("avatar") == "preset:av05", str((r.get("data") or {}).get("avatar")))
+
+print("== 10. 通知 ==")
 r = call("GET", "/app/notice/list?pageNum=1&pageSize=10", None, alice)
 check("notice list", r.get("code") == 200, f"count={len(r.get('data', {}).get('rows') or [])}")
 r = call("GET", "/app/notice/unread", None, alice)
 check("unread", r.get("code") == 200, str(r.get("data")))
 
-print("== 10. 审批群 ==")
+print("== 11. 审批群 ==")
 # 每人最多 3 个群。先解散上一轮跑出来的，保证脚本可以反复执行。
 r = call("GET", "/app/group/mine", None, alice)
 for g in (r.get("data") or []):
@@ -132,21 +144,21 @@ if code:
     r = call("POST", f"/app/group/join?inviteCode={code}", None, bob)
     check("bob 加入群", r.get("code") == 200, r.get("msg", ""))
 
-print("== 11. 举报 ==")
+print("== 12. 举报 ==")
 r = call("POST", "/app/report", {"targetType": "1", "targetId": order_id, "reasonType": "other", "content": "测试举报"}, bob)
 check("report", r.get("code") == 200, r.get("msg", ""))
 
-print("== 12. 收藏 ==")
+print("== 13. 收藏 ==")
 r = call("POST", f"/app/order/{order_id}/favorite", None, bob)
 check("favorite on", r.get("code") == 200 and r.get("data") is True)
 r = call("GET", "/app/order/mine?type=favorite&pageNum=1&pageSize=10", None, bob)
 check("favorite list", r.get("code") == 200, f"total={r.get('data', {}).get('total')}")
 
-print("== 13. 未登录拦截 ==")
+print("== 14. 未登录拦截 ==")
 r = call("GET", "/app/order/square?pageNum=1&pageSize=10")
 check("无 token 被拦截", r.get("code") == 401, str(r.get("code")))
 
-print("== 14. 审批时长 / 补充说明 / 提前结束 ==")
+print("== 15. 审批时长 / 补充说明 / 提前结束 ==")
 # 新建一单，指定 2 小时（审批时长由发起人自由设置）
 r = call("POST", "/app/order", {
     "title": "一台 999 的咖啡机",
