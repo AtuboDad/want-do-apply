@@ -20,7 +20,10 @@
             <text v-if="order.isTop === '1'" class="tag-top">置顶</text>
           </view>
           <view class="author">
-            <image class="avatar" :src="avatarUrl(order.userAvatar)" mode="aspectFill" />
+            <view class="avatar-wrap">
+              <image class="avatar" :src="avatarUrl(order.userAvatar)" mode="aspectFill" />
+              <VipBadge v-if="showAuthorVip" size="mini" />
+            </view>
             <text class="a-name">{{ order.userNickName || '匿名审批员' }}</text>
             <text class="a-time">{{ fromNow(order.createTime) }}</text>
             <text v-if="order.groupName" class="a-group">{{ order.groupName }}</text>
@@ -234,6 +237,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import Empty from './Empty.vue'
+import VipBadge from './VipBadge.vue'
 import {
   getDetail,
   cancelOrder,
@@ -245,7 +249,7 @@ import {
 import { submitVote, likeVote, addComment, getComments } from '../api/vote'
 import { report } from '../api/group'
 import { fullUrl } from '../utils/request'
-import { avatarUrl } from '../utils/avatar'
+import { avatarUrl, shouldShowVip } from '../utils/avatar'
 import {
   fromNow,
   money,
@@ -265,6 +269,8 @@ const emit = defineEmits<{
 }>()
 
 const order = ref<OrderItem | null>(null)
+/** 发起人挂着会员头像且没关角标 */
+const showAuthorVip = computed(() => shouldShowVip(order.value?.userAvatar, order.value?.userShowVip))
 const votes = ref<VoteItem[]>([])
 const comments = ref<CommentItem[]>([])
 const voteSort = ref<'hot' | 'new'>('hot')
@@ -678,6 +684,13 @@ defineExpose({ onMore, reload: load, wasChanged: () => dirty.value })
   height: 52rpx;
   border-radius: 50%;
   background: #f4efe4;
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 52rpx;
+  height: 52rpx;
 }
 
 .a-name {

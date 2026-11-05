@@ -4,7 +4,7 @@
     ref="maskRef"
     class="os-mask"
     :class="{ show: shown }"
-    :style="{ paddingBottom: inset + 'px' }"
+    :style="{ '--tab-inset': inset + 'px' }"
     @tap="close"
   >
     <!-- 只在顶部空白区拦截滑动，避免影响下面 sheet 里 scroll-view 的滚动 -->
@@ -175,8 +175,10 @@ function onMore() {
   transition: background 0.28s ease;
   display: flex;
   align-items: flex-end;
-  /* 左右 + 底部留白，卡片从底部「浮」起来，不跟屏幕边缘粘在一起 */
-  padding: 0 22rpx calc(20rpx + env(safe-area-inset-bottom));
+  /* 左右 + 底部留白，卡片从底部「浮」起来，不跟屏幕边缘粘在一起
+     --tab-inset 由 JS 量 H5 的 uni-tabbar 高度；小程序视口本就不含 tabBar，值为 0。
+     两者都再加 28rpx，让弹层和底部菜单之间空出一道缝，不贴在一起。 */
+  padding: 0 22rpx calc(28rpx + var(--tab-inset, 0px) + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 

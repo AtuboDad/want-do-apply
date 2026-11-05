@@ -31,9 +31,14 @@ export function getDetail(id: number | string): Promise<OrderDetail> {
   return request({ url: `/app/order/${id}` })
 }
 
-/** 发起审批 */
+/**
+ * 发起审批。
+ *
+ * 走 silent：失败原因由发布页用弹窗展示 —— 发单是重操作，
+ * toast 两秒就没了，用户很容易以为「已经发出去了」。
+ */
 export function createOrder(data: CreateOrderParams): Promise<number> {
-  return request({ url: '/app/order', method: 'POST', data })
+  return request({ url: '/app/order', method: 'POST', data, silent: true })
 }
 
 /** 撤销 */

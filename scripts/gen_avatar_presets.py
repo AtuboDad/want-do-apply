@@ -41,6 +41,13 @@ SOURCES = [
     ("av18", "Match_the_illustration_style_o_2026-11-05T07-07-06.png"),  # 针织帽男拿咖啡
     ("av19", "Match_the_illustration_style_o_2026-11-05T07-07-28.png"),  # 马尾女生举手机拍照
     ("av20", "Match_the_illustration_style_o_2026-11-05T07-08-16.png"),  # 短发女生拿拍立得
+    # —— 会员专属（VIP）6 张：中国风 + 各不相同的角度，前端列表见 utils/avatar.ts 的 VIP_AVATARS ——
+    ("av21", "Same_Japanese_flat_illustratio_2026-11-05T07-40-21.png"),  # 唐风郡主 侧身回眸
+    ("av22", "Same_Japanese_flat_illustratio_2026-11-05T07-40-58.png"),  # 仙侠剑客 侧身执剑
+    ("av23", "Same_Japanese_flat_illustratio_2026-11-05T07-41-53.png"),  # 国风公子 侧脸执扇
+    ("av24", "Same_Japanese_flat_illustratio_2026-11-05T07-42-19.png"),  # 仙侠仙子 背身回望
+    ("av25", "Same_Japanese_flat_illustratio_2026-11-05T07-42-44.png"),  # 民国名媛 旗袍珍珠
+    ("av26", "Same_Japanese_flat_illustratio_2026-11-05T07-43-15.png"),  # 唐宫贵女 团扇半遮
 ]
 
 SIZE = 224

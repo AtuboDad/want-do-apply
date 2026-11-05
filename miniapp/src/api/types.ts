@@ -3,6 +3,8 @@ export interface OrderItem {
   userId: number
   userNickName: string
   userAvatar: string
+  /** 发起人是否愿意露会员角标（'0' 隐藏，其余按展示） */
+  userShowVip?: string
   groupId?: number
   groupName?: string
   title: string

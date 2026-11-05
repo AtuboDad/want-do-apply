@@ -149,8 +149,29 @@ function switchTab(key: string) {
   load(true)
 }
 
+/**
+ * 提前把「发一个」页预载好。
+ *
+ * 小程序里 tabBar 页第一次点进去才现加载 + 渲染那一长串表单，
+ * 会有肉眼可见的白一下；广场页停留时先预热，点下去就是现成的。
+ */
+let publishPreloaded = false
+function preloadPublish() {
+  // #ifdef MP-WEIXIN
+  if (publishPreloaded) return
+  publishPreloaded = true
+  try {
+    // uni.preloadPage 仅微信小程序支持，低版本基础库没有就当没这回事
+    ;(uni as any).preloadPage({ url: '/pages/publish/index' })
+  } catch (e) {
+    // 预载失败不影响正常跳转
+  }
+  // #endif
+}
+
 onShow(() => {
   load(true)
+  preloadPublish()
   // 发完单后从「发一个」切回来，自动弹出刚发的那条
   const pending = takePendingOpenOrder()
   if (pending) setTimeout(() => openSheet(pending), 260)

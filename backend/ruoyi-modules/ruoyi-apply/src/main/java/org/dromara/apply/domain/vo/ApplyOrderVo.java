@@ -36,6 +36,9 @@ public class ApplyOrderVo implements Serializable {
     /** 发起人头像 */
     private String userAvatar;
 
+    /** 发起人是否愿意展示会员角标（1 展示 0 隐藏）；配合前端 VIP 头像清单判断 */
+    private String userShowVip;
+
     /** 审批群ID */
     private Long groupId;
 

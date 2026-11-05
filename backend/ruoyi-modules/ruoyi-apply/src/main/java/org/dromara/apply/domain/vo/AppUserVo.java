@@ -29,6 +29,9 @@ public class AppUserVo implements Serializable {
     /** 头像 */
     private String avatar;
 
+    /** 是否展示会员角标（1 展示 0 隐藏） */
+    private String showVip;
+
     /** 性别 */
     private String gender;
 

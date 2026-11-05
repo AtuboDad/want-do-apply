@@ -5,6 +5,8 @@ export interface AppUserInfo {
   id: number
   nickName: string
   avatar: string
+  /** 是否展示会员角标：'1' 展示 '0' 隐藏 */
+  showVip?: string
   gender?: string
   creditScore?: number
   applyCount?: number

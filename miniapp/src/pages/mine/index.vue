@@ -7,7 +7,10 @@
     <view class="hero">
       <view class="status-bar" :style="{ height: statusBarHeight + 'px' }" />
       <view class="profile">
-        <image class="avatar" :src="avatarUrl(user?.avatar)" mode="aspectFill" @tap="editProfile" />
+        <view class="avatar-wrap">
+          <image class="avatar" :src="avatarUrl(user?.avatar)" mode="aspectFill" @tap="editProfile" />
+          <VipBadge v-if="showMyVip" size="normal" />
+        </view>
         <view class="grow">
           <text class="nick">{{ user?.nickName || '审批员' }}</text>
           <view class="credit">
@@ -93,7 +96,7 @@
     </view>
 
     <!-- 编辑资料 -->
-    <view v-if="editVisible" class="mask" :style="{ paddingBottom: inset + 'px' }" @tap="closeEdit">
+    <view v-if="editVisible" class="mask" :style="{ '--tab-inset': inset + 'px' }" @tap="closeEdit">
       <view class="sheet" @tap.stop>
         <view class="sheet-head">
           <text class="sheet-title">修改资料</text>
@@ -127,6 +130,36 @@
           </view>
         </scroll-view>
 
+        <!-- 会员专属 -->
+        <view class="block-row vip-block">
+          <view class="vip-block-left">
+            <text class="vip-star">✦</text>
+            <text class="block-label vip-label">会员专属</text>
+            <text class="block-more">共 {{ VIP_AVATARS.length }} 个</text>
+          </view>
+          <view class="vip-toggle" @tap="toggleShowVip">
+            <text class="toggle-label">显示角标</text>
+            <view class="toggle" :class="{ on: editShowVip }">
+              <view class="knob" />
+            </view>
+          </view>
+        </view>
+        <view class="avatar-grid vip-grid">
+          <view
+            v-for="id in VIP_AVATARS"
+            :key="id"
+            class="av-cell vip-cell"
+            :class="{ on: editAvatar === presetAvatarValue(id) }"
+            @tap="pickPreset(id)"
+          >
+            <!-- 圆形容器单独一层：外层要 overflow:visible，否则右上角的 VIP 标会被裁掉 -->
+            <view class="vip-cell-inner">
+              <image class="av-img" :src="presetAvatarPath(id)" mode="aspectFill" />
+            </view>
+            <VipBadge v-if="editShowVip" size="mini" />
+          </view>
+        </view>
+
         <button class="wx-avatar" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
           或者用微信头像
         </button>
@@ -154,11 +187,12 @@ import { onReachBottom, onShow } from '@dcloudio/uni-app'
 import OrderCard from '../../components/OrderCard.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
 import Empty from '../../components/Empty.vue'
+import VipBadge from '../../components/VipBadge.vue'
 import { getMine, getProfile, toggleFavorite } from '../../api/order'
 import { getUnread } from '../../api/group'
 import { updateProfile } from '../../api/auth'
 import { uploadFile } from '../../utils/request'
-import { avatarUrl, PRESET_AVATARS, presetAvatarPath, presetAvatarValue } from '../../utils/avatar'
+import { avatarUrl, PRESET_AVATARS, VIP_AVATARS, presetAvatarPath, presetAvatarValue, shouldShowVip } from '../../utils/avatar'
 import { money } from '../../utils/format'
 import { userStore } from '../../store/user'
 import { ensureLogin } from '../../utils/auth'
@@ -201,6 +235,9 @@ const loading = ref(false)
 
 const user = computed(() => userStore.user)
 
+/** 自己头像上的角标：会员头像 + 自己没关开关 */
+const showMyVip = computed(() => shouldShowVip(user.value?.avatar, user.value?.showVip))
+
 const emptyText = computed(() => {
   if (keyword.value) return `没搜到「${keyword.value}」相关的单`
   if (status.value) return '这个状态下还没有单'
@@ -212,6 +249,8 @@ const emptyText = computed(() => {
 const editVisible = ref(false)
 const editNick = ref('')
 const editAvatar = ref('')
+/** 会员角标开关（弹层里的临时态，点了立即落库） */
+const editShowVip = ref(true)
 const inset = ref(0)
 
 const sheetVisible = ref(false)
@@ -360,6 +399,7 @@ function goNotice() {
 function editProfile() {
   editNick.value = user.value?.nickName || ''
   editAvatar.value = user.value?.avatar || ''
+  editShowVip.value = user.value?.showVip !== '0'
   inset.value = tabBarInsetPx()
   editVisible.value = true
 }
@@ -371,6 +411,23 @@ function closeEdit() {
 /** 选预设头像：存 preset:av03 这种标记，前端渲染走本地图片 */
 function pickPreset(id: string) {
   editAvatar.value = presetAvatarValue(id)
+}
+
+/**
+ * 会员角标开关。
+ *
+ * 这个开关和头像分开存：头像是「是不是会员」，开关是「愿不愿意露」。
+ * 点了立刻落库，不必等下面那个「保存」—— 不然用户会以为没生效。
+ */
+async function toggleShowVip() {
+  const next = !editShowVip.value
+  try {
+    await updateProfile(undefined, undefined, next ? '1' : '0')
+    editShowVip.value = next
+    uni.showToast({ title: next ? '角标已打开' : '角标已隐藏', icon: 'none' })
+  } catch (e) {
+    // 提示已由 request 统一弹出，这里保持开关原状
+  }
 }
 
 function onNickInput(e: any) {
@@ -432,6 +489,13 @@ onReachBottom(() => {
   align-items: center;
   gap: 20rpx;
   padding: 16rpx 36rpx 0;
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 108rpx;
+  height: 108rpx;
 }
 
 .avatar {
@@ -687,7 +751,8 @@ onReachBottom(() => {
   align-items: flex-end;
   padding-left: 20rpx;
   padding-right: 20rpx;
-  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  /* H5 要把 tabBar 高度算进去，再留 28rpx 的缝，不然弹层底边和菜单栏粘在一起 */
+  padding-bottom: calc(28rpx + var(--tab-inset, 0px) + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -765,6 +830,98 @@ onReachBottom(() => {
   color: #9a9488;
 }
 
+/* ===== 会员专属头像 ===== */
+.vip-block {
+  margin-top: 26rpx;
+  align-items: center;
+}
+
+.vip-block-left {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.vip-star {
+  font-size: 24rpx;
+  color: #c9902f;
+  line-height: 1;
+}
+
+/* 覆盖 block-label 的 margin-top：这里在 flex 行里，靠 .vip-block 的外边距就够 */
+.vip-label {
+  margin-top: 0;
+  color: #8a6a20;
+  font-weight: 700;
+}
+
+.vip-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.toggle-label {
+  font-size: 22rpx;
+  color: #9a9488;
+}
+
+.toggle {
+  width: 64rpx;
+  height: 36rpx;
+  border-radius: 999rpx;
+  background: #ded7c7;
+  padding: 4rpx;
+  box-sizing: border-box;
+  transition: background 0.2s ease;
+}
+
+.toggle.on {
+  background: #c9902f;
+}
+
+.knob {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2rpx 5rpx rgba(90, 70, 20, 0.22);
+  transition: transform 0.2s ease;
+}
+
+.toggle.on .knob {
+  transform: translateX(28rpx);
+}
+
+.vip-grid {
+  margin-top: 14rpx;
+}
+
+/* 外层不裁切，好让右上角的 VIP 标露出来。
+   要写成 .av-cell.vip-cell：单独一个 .vip-cell 特异性不够，
+   会被上面的 .av-cell { overflow: hidden } 盖掉，角标就看不见了。 */
+.av-cell.vip-cell {
+  position: relative;
+  overflow: visible;
+  border: none;
+  background: transparent;
+}
+
+.vip-cell-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #f7f3ea;
+  border: 4rpx solid rgba(201, 144, 47, 0.34);
+}
+
+.vip-cell.on .vip-cell-inner {
+  border-color: #c9902f;
+  box-shadow: 0 0 0 4rpx rgba(201, 144, 47, 0.18);
+}
+
 .block-row {
   display: flex;
   align-items: baseline;
@@ -777,8 +934,9 @@ onReachBottom(() => {
 }
 
 /* 3 行整：3×140 + 2×16 = 452rpx，剩下的靠内部滚动 */
+/* 普通款压到 2 行高度，给下面的会员专属腾地方，整层才不会顶出屏幕 */
 .avatar-scroll {
-  max-height: 452rpx;
+  max-height: 300rpx;
   margin-top: 14rpx;
   padding-bottom: 6rpx;
   box-sizing: content-box;
@@ -815,8 +973,7 @@ onReachBottom(() => {
 }
 
 .wx-avatar {
-  margin-top: 24rpx;
-  height: 72rpx;
+  margin-top: 24rpx;  height: 72rpx;
   line-height: 72rpx;
   border-radius: 999rpx;
   background: #f4efe4;

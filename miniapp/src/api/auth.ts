@@ -89,9 +89,22 @@ export async function refreshMe(): Promise<AppUserInfo> {
 }
 
 /** 更新昵称头像 */
-export async function updateProfile(nickName: string, avatar: string): Promise<void> {
+/**
+ * 更新昵称 / 头像 / 会员角标开关。
+ *
+ * 三个参数都可选，只传要改的那个即可（后端按非空字段更新）。
+ */
+export async function updateProfile(
+  nickName?: string,
+  avatar?: string,
+  showVip?: string
+): Promise<void> {
+  const qs: string[] = []
+  if (nickName !== undefined) qs.push(`nickName=${encodeURIComponent(nickName)}`)
+  if (avatar !== undefined) qs.push(`avatar=${encodeURIComponent(avatar)}`)
+  if (showVip !== undefined) qs.push(`showVip=${encodeURIComponent(showVip)}`)
   await request({
-    url: `/app/auth/profile?nickName=${encodeURIComponent(nickName)}&avatar=${encodeURIComponent(avatar)}`,
+    url: `/app/auth/profile?${qs.join('&')}`,
     method: 'PUT'
   })
   await refreshMe()

@@ -39,6 +39,9 @@ public class AppUser extends BaseEntity {
     /** 头像地址 */
     private String avatar;
 
+    /** 是否展示会员角标（1 展示 0 隐藏），用户可自己关掉 */
+    private String showVip;
+
     /** 性别（0未知 1男 2女） */
     private String gender;
 

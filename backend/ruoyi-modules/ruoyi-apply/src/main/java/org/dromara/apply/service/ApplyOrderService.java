@@ -189,6 +189,8 @@ public class ApplyOrderService {
         if (author != null) {
             vo.setUserNickName(author.getNickName());
             vo.setUserAvatar(author.getAvatar());
+            // 会员角标：是不是 VIP 头像由前端清单判断，这里只给「本人愿不愿意露」
+            vo.setUserShowVip(StringUtils.blankToDefault(author.getShowVip(), "1"));
         }
         if (order.getGroupId() != null) {
             ApplyGroup group = groupMapper.selectById(order.getGroupId());

@@ -142,7 +142,6 @@ import { getMyGroups, joinGroupByCode } from '../../api/group'
 import { uploadFile } from '../../utils/request'
 import { CATEGORIES, durationLabel } from '../../utils/format'
 import { ensureLogin } from '../../utils/auth'
-import { setPendingOpenOrder } from '../../utils/order-sheet'
 import type { GroupItem } from '../../api/types'
 
 /** 审批时长候选（小时） */
@@ -259,7 +258,7 @@ async function submit() {
   submitting.value = true
   try {
     await ensureLogin()
-    const id = await createOrder({
+    await createOrder({
       title: form.value.title.trim(),
       price,
       reason: form.value.reason.trim(),
@@ -272,14 +271,23 @@ async function submit() {
       groupId: form.value.groupId
     })
     reset()
-    uni.showToast({ title: '已发到广场', icon: 'none' })
-    // 把「要打开哪条」交给广场页，切过去之后它自己弹详情
+    // 发完直接把人送到「我提交的」—— 之前跳广场再弹详情，
+    // 用户回头去「我的」找自己刚发的单，找不到就以为没存上
+    uni.showToast({ title: '发好了，在「我提交的」里', icon: 'none' })
     setTimeout(() => {
-      setPendingOpenOrder(id)
-      uni.switchTab({ url: '/pages/index/index' })
-    }, 500)
-  } catch (e) {
-    // 错误已提示
+      uni.switchTab({ url: '/pages/mine/index' })
+    }, 400)
+  } catch (e: any) {
+    // 发单失败必须让人看清原因：toast 一闪而过，用户会以为已经发出去了
+    const msg: string = e?.message || e?.errMsg || '网络或服务异常，稍后再试'
+    if (msg !== '未登录') {
+      uni.showModal({
+        title: '没发出去',
+        content: msg,
+        showCancel: false,
+        confirmText: '知道了'
+      })
+    }
   } finally {
     submitting.value = false
   }

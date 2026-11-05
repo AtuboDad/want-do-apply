@@ -16,6 +16,7 @@ create table app_user (
     union_id          varchar(64)     default null               comment '微信unionid',
     nick_name         varchar(64)     default ''                 comment '昵称',
     avatar            varchar(500)    default ''                 comment '头像地址',
+    show_vip          char(1)         default '1'                comment '是否展示会员角标（1展示 0隐藏）',
     gender            char(1)         default '0'                comment '性别（0未知 1男 2女）',
     phone             varchar(20)     default ''                 comment '手机号',
     credit_score      int(11)         default 100                comment '信用分',

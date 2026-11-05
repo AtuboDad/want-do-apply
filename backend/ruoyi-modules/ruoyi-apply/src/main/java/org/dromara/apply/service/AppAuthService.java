@@ -129,17 +129,22 @@ public class AppAuthService {
      * @param nickName 昵称
      * @param avatar   头像
      */
-    public void updateProfile(String nickName, String avatar) {
+    public void updateProfile(String nickName, String avatar, String showVip) {
         Long uid = AppLoginHelper.requireUserId();
-        if (StringUtils.isBlank(nickName) && StringUtils.isBlank(avatar)) {
+        if (StringUtils.isBlank(nickName) && StringUtils.isBlank(avatar) && StringUtils.isBlank(showVip)) {
             return;
         }
         if (StringUtils.isNotBlank(avatar) && !isAllowedAvatar(avatar)) {
             throw new ServiceException("头像地址不合法");
         }
+        boolean hasShowVip = StringUtils.isNotBlank(showVip);
+        if (hasShowVip && !"0".equals(showVip) && !"1".equals(showVip)) {
+            throw new ServiceException("会员角标设置不合法");
+        }
         appUserMapper.update(null, Wrappers.<AppUser>lambdaUpdate()
             .set(StringUtils.isNotBlank(nickName), AppUser::getNickName, nickName)
             .set(StringUtils.isNotBlank(avatar), AppUser::getAvatar, avatar)
+            .set(hasShowVip, AppUser::getShowVip, showVip)
             .eq(AppUser::getId, uid));
     }
 

@@ -82,8 +82,9 @@ public class AppAuthController {
      */
     @PutMapping("/profile")
     public R<Void> updateProfile(@RequestParam(required = false) String nickName,
-                                 @RequestParam(required = false) String avatar) {
-        appAuthService.updateProfile(nickName, avatar);
+                                 @RequestParam(required = false) String avatar,
+                                 @RequestParam(required = false) String showVip) {
+        appAuthService.updateProfile(nickName, avatar, showVip);
         return R.ok();
     }
 

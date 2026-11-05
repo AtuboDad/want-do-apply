@@ -1,7 +1,10 @@
 <template>
   <view class="order-card" @tap="go">
     <view class="head">
-      <image class="avatar" :src="avatarUrl(item.userAvatar)" mode="aspectFill" />
+      <view class="avatar-wrap">
+        <image class="avatar" :src="avatarUrl(item.userAvatar)" mode="aspectFill" />
+        <VipBadge v-if="showVip" size="mini" />
+      </view>
       <view class="grow">
         <view class="name-row">
           <text class="name">{{ item.userNickName || '匿名审批员' }}</text>
@@ -76,7 +79,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { fullUrl } from '../utils/request'
-import { avatarUrl } from '../utils/avatar'
+import { avatarUrl, shouldShowVip } from '../utils/avatar'
+import VipBadge from './VipBadge.vue'
 import { fromNow, money, countdown, statusText, statusColor } from '../utils/format'
 import type { OrderItem } from '../api/types'
 
@@ -86,6 +90,9 @@ const emit = defineEmits<{ (e: 'open', id: number | string): void; (e: 'favorite
 
 /** 单人审批：一个人表态就出结果；多人审批：时长内攒意见 */
 const modeLabel = computed(() => (props.item.approveMode === '0' ? '单人审批' : '多人审批'))
+
+/** 会员头像 + 本人没关掉角标，才显示 VIP */
+const showVip = computed(() => shouldShowVip(props.item.userAvatar, props.item.userShowVip))
 
 function go() {
   // 由所在页面决定怎么展示详情（现在是弹出圆角弹层，不再是整页跳转）
@@ -111,6 +118,13 @@ function toggleFav() {
   display: flex;
   align-items: center;
   gap: 16rpx;
+}
+
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 68rpx;
+  height: 68rpx;
 }
 
 .avatar {
