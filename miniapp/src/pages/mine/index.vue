@@ -111,13 +111,24 @@
           <text class="avatar-tip">挑一个顺眼的形象</text>
         </view>
 
-        <view class="block-row">
-          <text class="block-label">我们画的</text>
-          <text class="block-more">共 {{ PRESET_AVATARS.length }} 个 · 上下滑</text>
+        <!-- 「我们画的」和「会员专属」做成标签切换：
+             两组同时铺开会把整个弹层顶出屏幕顶部（真机上确实被顶出去了），
+             一次只显示一组，高度直接砍掉一半。 -->
+        <view class="av-tabs">
+          <view class="av-tab" :class="{ on: avTab === 'preset' }" @tap="avTab = 'preset'">
+            <text class="av-tab-text">我们画的</text>
+            <text class="av-tab-num">{{ PRESET_AVATARS.length }}</text>
+          </view>
+          <view class="av-tab vip" :class="{ on: avTab === 'vip' }" @tap="avTab = 'vip'">
+            <text class="av-tab-star">✦</text>
+            <text class="av-tab-text">会员专属</text>
+            <text class="av-tab-num">{{ VIP_AVATARS.length }}</text>
+          </view>
         </view>
-        <!-- 20 个头像 5 行，固定 3 行高度内部滚，别把弹层顶出屏幕 -->
-        <scroll-view class="avatar-scroll" scroll-y :show-scrollbar="false">
-          <view class="avatar-grid">
+
+        <!-- 中间这层统一滚动：头像再多也只是在里面滑，弹层本身高度固定 -->
+        <scroll-view class="sheet-body" scroll-y :show-scrollbar="false">
+          <view v-if="avTab === 'preset'" class="avatar-grid">
             <view
               v-for="id in PRESET_AVATARS"
               :key="id"
@@ -128,51 +139,51 @@
               <image class="av-img" :src="presetAvatarPath(id)" mode="aspectFill" />
             </view>
           </view>
+
+          <view v-else class="vip-panel">
+            <view class="vip-toggle-row">
+              <text class="vip-hint">头像右上角的 VIP 标</text>
+              <view class="vip-toggle" @tap="toggleShowVip">
+                <text class="toggle-label">显示角标</text>
+                <view class="toggle" :class="{ on: editShowVip }">
+                  <view class="knob" />
+                </view>
+              </view>
+            </view>
+            <view class="avatar-grid vip-grid">
+              <view
+                v-for="id in VIP_AVATARS"
+                :key="id"
+                class="av-cell vip-cell"
+                :class="{ on: editAvatar === presetAvatarValue(id) }"
+                @tap="pickPreset(id)"
+              >
+                <!-- 圆形容器单独一层：外层要 overflow:visible，否则右上角的 VIP 标会被裁掉 -->
+                <view class="vip-cell-inner">
+                  <image class="av-img" :src="presetAvatarPath(id)" mode="aspectFill" />
+                </view>
+                <VipBadge v-if="editShowVip" size="mini" />
+              </view>
+            </view>
+            <text class="vip-note">换上之后头像右上角会挂 VIP 标；关掉开关只是不露标，头像本身不变。</text>
+          </view>
         </scroll-view>
 
-        <!-- 会员专属 -->
-        <view class="block-row vip-block">
-          <view class="vip-block-left">
-            <text class="vip-star">✦</text>
-            <text class="block-label vip-label">会员专属</text>
-            <text class="block-more">共 {{ VIP_AVATARS.length }} 个</text>
-          </view>
-          <view class="vip-toggle" @tap="toggleShowVip">
-            <text class="toggle-label">显示角标</text>
-            <view class="toggle" :class="{ on: editShowVip }">
-              <view class="knob" />
-            </view>
-          </view>
-        </view>
-        <view class="avatar-grid vip-grid">
-          <view
-            v-for="id in VIP_AVATARS"
-            :key="id"
-            class="av-cell vip-cell"
-            :class="{ on: editAvatar === presetAvatarValue(id) }"
-            @tap="pickPreset(id)"
-          >
-            <!-- 圆形容器单独一层：外层要 overflow:visible，否则右上角的 VIP 标会被裁掉 -->
-            <view class="vip-cell-inner">
-              <image class="av-img" :src="presetAvatarPath(id)" mode="aspectFill" />
-            </view>
-            <VipBadge v-if="editShowVip" size="mini" />
-          </view>
-        </view>
+        <view class="sheet-foot">
+          <button class="wx-avatar" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+            或者用微信头像
+          </button>
 
-        <button class="wx-avatar" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
-          或者用微信头像
-        </button>
-
-        <input
-          class="sheet-input"
-          type="nickname"
-          :value="editNick"
-          placeholder="输入昵称"
-          maxlength="20"
-          @input="onNickInput"
-        />
-        <button class="submit" @tap="saveProfile">保存</button>
+          <input
+            class="sheet-input"
+            type="nickname"
+            :value="editNick"
+            placeholder="输入昵称"
+            maxlength="20"
+            @input="onNickInput"
+          />
+          <button class="submit" @tap="saveProfile">保存</button>
+        </view>
       </view>
     </view>
 
@@ -192,7 +203,7 @@ import { getMine, getProfile, toggleFavorite } from '../../api/order'
 import { getUnread } from '../../api/group'
 import { updateProfile } from '../../api/auth'
 import { uploadFile } from '../../utils/request'
-import { avatarUrl, PRESET_AVATARS, VIP_AVATARS, presetAvatarPath, presetAvatarValue, shouldShowVip } from '../../utils/avatar'
+import { avatarUrl, isVipAvatar, PRESET_AVATARS, VIP_AVATARS, presetAvatarPath, presetAvatarValue, shouldShowVip } from '../../utils/avatar'
 import { money } from '../../utils/format'
 import { userStore } from '../../store/user'
 import { ensureLogin } from '../../utils/auth'
@@ -249,13 +260,15 @@ const emptyText = computed(() => {
 const editVisible = ref(false)
 const editNick = ref('')
 const editAvatar = ref('')
+/** 头像分组标签：preset = 我们画的，vip = 会员专属 */
+const avTab = ref<'preset' | 'vip'>('preset')
 /** 会员角标开关（弹层里的临时态，点了立即落库） */
 const editShowVip = ref(true)
 const inset = ref(0)
 
 const sheetVisible = ref(false)
-/** 弹层打开时锁页面滚动（仅小程序生效） */
-const pageStyle = pageStyleWhen(() => sheetVisible.value)
+/** 弹层打开时锁页面滚动（仅小程序生效）—— 详情弹层和资料弹层都算 */
+const pageStyle = pageStyleWhen(() => sheetVisible.value || editVisible.value)
 const sheetOrderId = ref<number | string>(0)
 
 /** 卡片上的围观按钮：点一下关注，再点取消 */
@@ -400,6 +413,8 @@ function editProfile() {
   editNick.value = user.value?.nickName || ''
   editAvatar.value = user.value?.avatar || ''
   editShowVip.value = user.value?.showVip !== '0'
+  // 现在用的是会员头像就直接落在会员那一栏，省得用户再点一次
+  avTab.value = isVipAvatar(editAvatar.value) ? 'vip' : 'preset'
   inset.value = tabBarInsetPx()
   editVisible.value = true
 }
@@ -751,16 +766,28 @@ onReachBottom(() => {
   align-items: flex-end;
   padding-left: 20rpx;
   padding-right: 20rpx;
-  /* H5 要把 tabBar 高度算进去，再留 28rpx 的缝，不然弹层底边和菜单栏粘在一起 */
-  padding-bottom: calc(28rpx + var(--tab-inset, 0px) + env(safe-area-inset-bottom));
+  /* H5 要把 tabBar 高度算进去，再留 56rpx 的缝，不然弹层底边和菜单栏粘在一起 */
+  padding-bottom: calc(56rpx + var(--tab-inset, 0px) + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
+/* 高度封顶 + 中间滚动：
+   原来靠内容撑，20 个普通头像加 6 个会员头像一起铺开，比屏幕还高，
+   弹层就从顶部顶出去了 —— 真机 / 开发者工具里上面的标题和预览全被切掉。
+   现在标题、预览、标签、底部按钮都是固定区，只有头像区在中间滚，
+   封顶 82vh 而不是写死高度：会员那栏只有 6 个，弹层就该矮一点。
+   注意不能写 height:0 撑满，那样内容少时会把整层压塌。 */
 .sheet {
   width: 100%;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 40rpx;
-  padding: 34rpx 32rpx calc(30rpx + env(safe-area-inset-bottom));
+  padding: 30rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  /* 兜底：中间区万一没被压住，也不许内容漏到弹层外面 */
+  overflow: hidden;
 }
 
 .sheet-title {
@@ -805,13 +832,14 @@ onReachBottom(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10rpx;
-  margin-top: 20rpx;
+  gap: 8rpx;
+  margin-top: 10rpx;
+  flex-shrink: 0;
 }
 
 .avatar-preview {
-  width: 128rpx;
-  height: 128rpx;
+  width: 112rpx;
+  height: 112rpx;
   border-radius: 50%;
   background: #f4efe4;
   border: 4rpx solid #fff;
@@ -823,36 +851,91 @@ onReachBottom(() => {
   color: #9a9488;
 }
 
-.block-label {
-  display: block;
-  margin-top: 24rpx;
-  font-size: 23rpx;
-  color: #9a9488;
+/* ===== 头像分组标签 ===== */
+.av-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8rpx;
+  margin-top: 22rpx;
+  padding: 6rpx;
+  background: #f4efe4;
+  border-radius: 999rpx;
 }
 
-/* ===== 会员专属头像 ===== */
-.vip-block {
-  margin-top: 26rpx;
-  align-items: center;
-}
-
-.vip-block-left {
+.av-tab {
+  flex: 1;
+  height: 64rpx;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8rpx;
+  border-radius: 999rpx;
+  color: #7a7466;
+  font-size: 25rpx;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.vip-star {
-  font-size: 24rpx;
+.av-tab.on {
+  background: #fff;
+  color: #2f5a4c;
+  font-weight: 700;
+  box-shadow: 0 4rpx 14rpx rgba(47, 90, 76, 0.12);
+}
+
+.av-tab.vip.on {
+  color: #8a6a20;
+}
+
+.av-tab-star {
+  font-size: 22rpx;
   color: #c9902f;
   line-height: 1;
 }
 
-/* 覆盖 block-label 的 margin-top：这里在 flex 行里，靠 .vip-block 的外边距就够 */
-.vip-label {
-  margin-top: 0;
+.av-tab-num {
+  font-size: 20rpx;
+  color: #b3ada0;
+  line-height: 1;
+}
+
+.av-tab.on .av-tab-num {
+  color: #8fa79a;
+}
+
+/* 中间滚动区。
+   uni-app 的 scroll-view 内层高度是按内容撑出来的，外层被 flex 压缩后
+   内层不跟着缩（实测外层 335、内层仍 397），头像就漏到下面的按钮上。
+   内层要按外层高度百分比算，就得让外层自己有确定高度 ——
+   所以这里用 calc 直接把「82vh 减去标题/预览/标签/按钮的固定高度」算出来。
+   700rpx 是这些固定块的合计（略宽松，宁可少一行也别溢出）。 */
+.sheet-body {
+  flex: 0 0 auto;
+  height: calc(82vh - 700rpx);
+  min-height: 200rpx;
+  margin-top: 20rpx;
+}
+
+/* 底部操作区固定，不跟着头像滚 */
+.sheet-foot {
+  flex-shrink: 0;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #f1ece0;
+}
+
+/* ===== 会员专属头像 ===== */
+.vip-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 18rpx;
+  background: #fdf7e9;
+}
+
+.vip-hint {
+  font-size: 23rpx;
   color: #8a6a20;
-  font-weight: 700;
 }
 
 .vip-toggle {
@@ -894,7 +977,17 @@ onReachBottom(() => {
 }
 
 .vip-grid {
-  margin-top: 14rpx;
+  margin-top: 4rpx;
+}
+
+.vip-note {
+  display: block;
+  margin-top: 22rpx;
+  padding: 0 8rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #b09a6a;
+  text-align: center;
 }
 
 /* 外层不裁切，好让右上角的 VIP 标露出来。
@@ -920,26 +1013,6 @@ onReachBottom(() => {
 .vip-cell.on .vip-cell-inner {
   border-color: #c9902f;
   box-shadow: 0 0 0 4rpx rgba(201, 144, 47, 0.18);
-}
-
-.block-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.block-more {
-  font-size: 22rpx;
-  color: #b3ada0;
-}
-
-/* 3 行整：3×140 + 2×16 = 452rpx，剩下的靠内部滚动 */
-/* 普通款压到 2 行高度，给下面的会员专属腾地方，整层才不会顶出屏幕 */
-.avatar-scroll {
-  max-height: 300rpx;
-  margin-top: 14rpx;
-  padding-bottom: 6rpx;
-  box-sizing: content-box;
 }
 
 /* 4 列：4×140 + 3×16 = 608rpx，排在 686rpx 的可用宽度里居中 */
@@ -973,7 +1046,8 @@ onReachBottom(() => {
 }
 
 .wx-avatar {
-  margin-top: 24rpx;  height: 72rpx;
+  margin-top: 0;
+  height: 72rpx;
   line-height: 72rpx;
   border-radius: 999rpx;
   background: #f4efe4;
@@ -988,7 +1062,7 @@ onReachBottom(() => {
 }
 
 .sheet-input {
-  margin-top: 22rpx;
+  margin-top: 16rpx;
   height: 84rpx;
   line-height: 84rpx;
   background: #f7f3ea;
@@ -1000,7 +1074,7 @@ onReachBottom(() => {
 }
 
 .submit {
-  margin-top: 26rpx;
+  margin-top: 16rpx;
   height: 88rpx;
   line-height: 88rpx;
   border-radius: 999rpx;

@@ -177,8 +177,9 @@ function onMore() {
   align-items: flex-end;
   /* 左右 + 底部留白，卡片从底部「浮」起来，不跟屏幕边缘粘在一起
      --tab-inset 由 JS 量 H5 的 uni-tabbar 高度；小程序视口本就不含 tabBar，值为 0。
-     两者都再加 28rpx，让弹层和底部菜单之间空出一道缝，不贴在一起。 */
-  padding: 0 22rpx calc(28rpx + var(--tab-inset, 0px) + env(safe-area-inset-bottom));
+     28rpx（14px）那版在真机 / 开发者工具上看还是贴着菜单栏，拉到 56rpx（28px）
+     才明显是一张浮起来的卡片。 */
+  padding: 0 22rpx calc(56rpx + var(--tab-inset, 0px) + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
