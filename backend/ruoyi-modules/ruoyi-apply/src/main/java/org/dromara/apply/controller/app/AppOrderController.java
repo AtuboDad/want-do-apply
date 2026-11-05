@@ -111,10 +111,15 @@ public class AppOrderController {
 
     /**
      * 我的：apply-发起 vote-批过 favorite-收藏
+     *
+     * @param keyword 标题/理由关键字
+     * @param status  状态筛选
      */
     @GetMapping("/mine")
     public R<PageResult<ApplyOrderVo>> mine(@RequestParam(defaultValue = "apply") String type,
+                                            @RequestParam(required = false) String keyword,
+                                            @RequestParam(required = false) String status,
                                             PageQuery pageQuery) {
-        return R.ok(orderService.mine(type, pageQuery));
+        return R.ok(orderService.mine(type, keyword, status, pageQuery));
     }
 }

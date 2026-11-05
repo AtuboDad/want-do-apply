@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 小程序登录服务
@@ -52,7 +53,8 @@ public class AppAuthService {
             user.setNickName(StringUtils.isNotBlank(bo.getNickName())
                 ? bo.getNickName()
                 : "审批员" + (System.currentTimeMillis() % 100000));
-            user.setAvatar(StringUtils.blankToDefault(bo.getAvatar(), ""));
+            user.setAvatar(StringUtils.isNotBlank(bo.getAvatar())
+                ? bo.getAvatar() : randomPresetAvatar());
             user.setGender(StringUtils.blankToDefault(bo.getGender(), "0"));
             user.setPhone("");
             user.setCreditScore(100);
@@ -77,6 +79,11 @@ public class AppAuthService {
             }
             if (StringUtils.isNotBlank(bo.getAvatar()) && !bo.getAvatar().equals(user.getAvatar())) {
                 user.setAvatar(bo.getAvatar());
+                changed = true;
+            }
+            // 老用户没头像的，登录时补一个默认萌粒头像，别再显示灰底小人
+            if (StringUtils.isBlank(user.getAvatar())) {
+                user.setAvatar(randomPresetAvatar());
                 changed = true;
             }
             user.setLastLoginTime(LocalDateTime.now());
@@ -134,6 +141,14 @@ public class AppAuthService {
             .set(StringUtils.isNotBlank(nickName), AppUser::getNickName, nickName)
             .set(StringUtils.isNotBlank(avatar), AppUser::getAvatar, avatar)
             .eq(AppUser::getId, uid));
+    }
+
+    /**
+     * 默认头像：8 张萌粒风插画里随机一张。
+     * 存的是 preset:avNN 标记，小程序端直接读包内图片，不走网络。
+     */
+    private String randomPresetAvatar() {
+        return "preset:av0" + (ThreadLocalRandom.current().nextInt(8) + 1);
     }
 
     /**

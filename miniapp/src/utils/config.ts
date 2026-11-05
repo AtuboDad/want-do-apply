@@ -5,13 +5,16 @@
  * 微信开发者工具调试时改成你本机或服务器的地址，并在「详情-本地设置」勾选
  * 「不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书」。
  */
+/**
+ * 只声明一次，用条件编译改值 —— 声明两次（#ifdef / #ifndef 各一份）会让
+ * vue-tsc 看到重复声明直接报错，而它并不处理条件编译注释。
+ */
+let baseUrl = 'http://127.0.0.1:8080'
 // #ifdef H5
-export const BASE_URL = ''
+baseUrl = ''
 // #endif
 
-// #ifndef H5
-export const BASE_URL = 'http://127.0.0.1:8080'
-// #endif
+export const BASE_URL = baseUrl
 
 export const TOKEN_KEY = 'wda_token'
 export const USER_KEY = 'wda_user'

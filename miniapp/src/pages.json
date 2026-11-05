@@ -52,8 +52,8 @@
     }
   ],
   "tabBar": {
-    "color": "#9AA0A6",
-    "selectedColor": "#FF6B35",
+    "color": "#9A9488",
+    "selectedColor": "#2F5A4C",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "fontSize": "11px",
@@ -89,7 +89,7 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "钱包请等等",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "backgroundColor": "#F5F5F7"
+    "navigationBarBackgroundColor": "#F6F2E9",
+    "backgroundColor": "#F6F2E9"
   }
 }

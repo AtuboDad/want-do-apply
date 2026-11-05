@@ -1,4 +1,8 @@
 <template>
+  <!-- #ifdef MP-WEIXIN -->
+  <!-- 弹层打开时禁掉页面原生滚动，否则手指在弹层上划，底下的页面会跟着动 -->
+  <page-meta :page-style="pageStyle" />
+  <!-- #endif -->
   <view class="page">
     <view class="hero">
       <view class="status-bar" :style="{ height: statusBarHeight + 'px' }" />
@@ -46,6 +50,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { pageStyleWhen } from '../../utils/scroll-lock'
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
 import OrderCard from '../../components/OrderCard.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
@@ -75,6 +80,8 @@ const hasMore = ref(true)
 const loading = ref(false)
 
 const sheetVisible = ref(false)
+/** 弹层打开时锁页面滚动（仅小程序生效） */
+const pageStyle = pageStyleWhen(() => sheetVisible.value)
 const sheetOrderId = ref(0)
 
 function openSheet(id: number) {
@@ -136,14 +143,15 @@ onReachBottom(() => {
 <style lang="scss" scoped>
 .page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: #f6f2e9;
 }
 
 .hero {
-  background: linear-gradient(135deg, #ff8a3d 0%, #ff6b35 55%, #f2542d 100%);
+  /* 主色改成墨绿，配暖米底色，比橘色更「贵」也更耐看 */
+  background: linear-gradient(150deg, #35604f 0%, #2a4e41 58%, #234439 100%);
   padding-bottom: 56rpx;
-  border-bottom-left-radius: 36rpx;
-  border-bottom-right-radius: 36rpx;
+  border-bottom-left-radius: 40rpx;
+  border-bottom-right-radius: 40rpx;
 }
 
 .hero-inner {
@@ -159,18 +167,18 @@ onReachBottom(() => {
 .brand-name {
   font-size: 46rpx;
   font-weight: 800;
-  color: #fff;
+  color: #fbf7ee;
   letter-spacing: 1rpx;
 }
 
 .brand-dot {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(251, 247, 238, 0.5);
   font-size: 34rpx;
 }
 
 .brand-slogan {
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(251, 247, 238, 0.78);
 }
 
 .hero-stat {
@@ -183,13 +191,13 @@ onReachBottom(() => {
 .stat-num {
   font-size: 60rpx;
   font-weight: 800;
-  color: #fff;
+  color: #fbf7ee;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(251, 247, 238, 0.76);
 }
 
 .tabs {
@@ -201,15 +209,17 @@ onReachBottom(() => {
 
 .tab {
   font-size: 26rpx;
-  color: #6b7280;
+  color: #5f6b63;
   padding: 10rpx 26rpx;
   border-radius: 999rpx;
   background: #fff;
+  border: 1rpx solid #ede6d7;
 }
 
 .tab.active {
-  color: #fff;
-  background: #1a1a1a;
+  color: #fbf7ee;
+  background: #2f5a4c;
+  border-color: #2f5a4c;
   font-weight: 600;
 }
 
@@ -224,7 +234,7 @@ onReachBottom(() => {
 
 .refresh-icon {
   font-size: 32rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .list {
@@ -234,7 +244,7 @@ onReachBottom(() => {
 .footer-tip {
   text-align: center;
   font-size: 22rpx;
-  color: #b8bcc2;
+  color: #b3ada1;
   padding: 30rpx 0 20rpx;
 }
 </style>

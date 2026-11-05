@@ -110,6 +110,8 @@ public class ApplyOrderService {
         order.setUserId(userId);
         order.setGroupId(groupId);
         order.setVisibility(visibility);
+        // 审批方式：单人审批一人表态即出结果，多人审批汇总意见到点结算
+        order.setApproveMode(StringUtils.blankToDefault(bo.getApproveMode(), ApplyConstants.MODE_MULTI));
         order.setCategory(StringUtils.blankToDefault(bo.getCategory(), "other"));
         order.setImages(StringUtils.blankToDefault(bo.getImages(), ""));
         order.setSubstitute(StringUtils.blankToDefault(bo.getSubstitute(), ""));
@@ -252,7 +254,7 @@ public class ApplyOrderService {
             throw new ServiceException("审批单不存在");
         }
         if (!ApplyConstants.ORDER_PENDING.equals(order.getStatus())) {
-            throw new ServiceException("这单已经结案了，写不了补充说明");
+            throw new ServiceException("审批已经结束了，写不了补充说明");
         }
         String text = note == null ? "" : note.trim();
         if (text.isEmpty()) {
@@ -311,13 +313,16 @@ public class ApplyOrderService {
      * 我的：发起的 / 批过的 / 收藏的
      *
      * @param type      apply/vote/favorite
+     * @param keyword   标题或理由关键字，可为空
+     * @param status    状态筛选，可为空
      * @param pageQuery 分页
      * @return 分页数据
      */
-    public PageResult<ApplyOrderVo> mine(String type, PageQuery pageQuery) {
+    public PageResult<ApplyOrderVo> mine(String type, String keyword, String status, PageQuery pageQuery) {
         Long userId = AppLoginHelper.requireUserId();
         String t = StringUtils.blankToDefault(type, "apply");
-        IPage<ApplyOrderVo> page = orderMapper.selectMinePage(pageQuery.build(), userId, t);
+        IPage<ApplyOrderVo> page = orderMapper.selectMinePage(pageQuery.build(), userId, t,
+            StringUtils.trim(keyword), StringUtils.trim(status));
         decorate(page.getRecords(), userId);
         return PageResult.build(page.getRecords(), page.getTotal());
     }

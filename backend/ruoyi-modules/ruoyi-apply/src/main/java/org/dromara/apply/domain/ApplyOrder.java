@@ -58,6 +58,9 @@ public class ApplyOrder extends BaseEntity {
     /** 可见范围（0公开 1群内） */
     private String visibility;
 
+    /** 审批方式（0单人审批 1多人审批） */
+    private String approveMode;
+
     /** 审批时长（小时），到点后按少数服从多数结算 */
     private Integer durationHours;
 

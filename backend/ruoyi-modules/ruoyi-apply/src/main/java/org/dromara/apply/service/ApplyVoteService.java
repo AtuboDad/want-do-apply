@@ -58,7 +58,7 @@ public class ApplyVoteService {
             throw new ServiceException("审批单不存在");
         }
         if (!ApplyConstants.ORDER_PENDING.equals(order.getStatus())) {
-            throw new ServiceException("这单已经结案啦，下次早点来");
+            throw new ServiceException("审批已经结束啦，下次早点来");
         }
         if (order.getExpireTime() != null && order.getExpireTime().isBefore(LocalDateTime.now())) {
             throw new ServiceException("这单已经过期啦，下次早点来");
@@ -90,7 +90,7 @@ public class ApplyVoteService {
         vote.setOrderId(bo.getOrderId());
         vote.setUserId(userId);
         vote.setResult(bo.getResult());
-        vote.setReason(bo.getReason().trim());
+        vote.setReason(bo.getReason() == null ? "" : bo.getReason().trim());
         vote.setLikeCount(0);
         vote.setDelFlag("0");
         vote.setCreateBy(userId);
@@ -111,9 +111,13 @@ public class ApplyVoteService {
         // 给发起人发通知
         sendNotice(order.getUserId(), ApplyConstants.NOTICE_VOTE,
             "有人批了你的单",
-            (pass ? "通过了 ✓ " : "驳回了 ✗ ") + truncate(bo.getReason(), 60),
+            (pass ? "通过了 ✓ " : "驳回了 ✗ ") + truncate(vote.getReason(), 60),
             order.getId());
 
+        // 单人审批：一个人表态就出结果，不用等到审批时间结束
+        if (ApplyConstants.MODE_SINGLE.equals(order.getApproveMode())) {
+            return settle(order.getId(), false);
+        }
         return settleIfNeeded(order.getId());
     }
 
@@ -238,7 +242,7 @@ public class ApplyVoteService {
             throw new ServiceException("审批单不存在");
         }
         if (!ApplyConstants.ORDER_PENDING.equals(order.getStatus())) {
-            throw new ServiceException("这单已经结案了");
+            throw new ServiceException("审批已经结束了");
         }
         if (order.getVoteCount() == null || order.getVoteCount() == 0) {
             throw new ServiceException("还没有人表态，结束就算流拍了");

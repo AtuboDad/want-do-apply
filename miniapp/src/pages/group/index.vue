@@ -146,11 +146,11 @@ onShow(() => {
 <style lang="scss" scoped>
 .page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: #f6f2e9;
 }
 
 .hero {
-  background: linear-gradient(135deg, #ff8a3d 0%, #ff6b35 55%, #f2542d 100%);
+  background: linear-gradient(135deg, #35604f 0%, #2f5a4c 55%, #234439 100%);
   padding-bottom: 40rpx;
   border-bottom-left-radius: 36rpx;
   border-bottom-right-radius: 36rpx;
@@ -181,7 +181,7 @@ onShow(() => {
 
 .h-btn {
   background: #fff;
-  color: #ff6b35;
+  color: #2f5a4c;
   font-size: 25rpx;
   font-weight: 600;
   border-radius: 999rpx;
@@ -189,8 +189,9 @@ onShow(() => {
 }
 
 .h-btn.ghost {
-  background: rgba(255, 255, 255, 0.24);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  color: #f2ede2;
+  border: 1rpx solid rgba(251, 247, 238, 0.55);
 }
 
 .list {
@@ -214,7 +215,7 @@ onShow(() => {
   width: 84rpx;
   height: 84rpx;
   border-radius: 22rpx;
-  background: linear-gradient(135deg, #ff8a3d, #ff6b35);
+  background: linear-gradient(135deg, #35604f, #2f5a4c);
   color: #fff;
   font-size: 36rpx;
   font-weight: 700;
@@ -233,14 +234,14 @@ onShow(() => {
 .g-name {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #1d2320;
   max-width: 340rpx;
 }
 
 .owner-tag {
   font-size: 20rpx;
-  color: #ff6b35;
-  background: #fff1ea;
+  color: #2f5a4c;
+  background: #e9efe9;
   border-radius: 6rpx;
   padding: 2rpx 10rpx;
 }
@@ -248,7 +249,7 @@ onShow(() => {
 .g-meta {
   display: block;
   font-size: 22rpx;
-  color: #9aa0a6;
+  color: #9a9488;
   margin-top: 6rpx;
 }
 
@@ -261,8 +262,8 @@ onShow(() => {
   display: block;
   margin-top: 18rpx;
   font-size: 24rpx;
-  color: #6b7280;
-  background: #fafafa;
+  color: #5f6b63;
+  background: #f8f4ec;
   border-radius: 12rpx;
   padding: 14rpx 18rpx;
 }
@@ -270,7 +271,7 @@ onShow(() => {
 .g-foot {
   margin-top: 20rpx;
   padding-top: 18rpx;
-  border-top: 1rpx solid #f0f0f2;
+  border-top: 1rpx solid #f1ebde;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -284,27 +285,27 @@ onShow(() => {
 
 .code-label {
   font-size: 21rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .code-val {
   font-size: 24rpx;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #1d2320;
   letter-spacing: 2rpx;
 }
 
 .copy {
   font-size: 20rpx;
-  color: #ff6b35;
-  background: #fff1ea;
+  color: #2f5a4c;
+  background: #e9efe9;
   border-radius: 6rpx;
   padding: 2rpx 10rpx;
 }
 
 .g-go {
   font-size: 24rpx;
-  color: #ff6b35;
+  color: #2f5a4c;
   font-weight: 600;
 }
 
@@ -335,7 +336,7 @@ onShow(() => {
 
 .sheet-input {
   margin-top: 24rpx;
-  background: #f7f7f9;
+  background: #f8f4ec;
   border-radius: 16rpx;
   padding: 24rpx;
   font-size: 28rpx;
@@ -353,7 +354,7 @@ onShow(() => {
   height: 88rpx;
   line-height: 88rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #ff8a3d, #ff6b35);
+  background: linear-gradient(135deg, #35604f, #2f5a4c);
   color: #fff;
   font-size: 30rpx;
   font-weight: 700;

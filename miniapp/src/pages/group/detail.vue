@@ -1,6 +1,10 @@
 <template>
+  <!-- #ifdef MP-WEIXIN -->
+  <!-- 弹层打开时禁掉页面原生滚动，否则手指在弹层上划，底下的页面会跟着动 -->
+  <page-meta :page-style="pageStyle" />
+  <!-- #endif -->
   <view class="page">
-    <NavBar :title="group?.name || '群内审批'" back bg="#ffffff" />
+    <NavBar :title="group?.name || '群内审批'" back bg="#F6F2E9" />
 
     <view v-if="group" class="head-card">
       <view class="top">
@@ -44,6 +48,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { pageStyleWhen } from '../../utils/scroll-lock'
 import { onLoad, onReachBottom } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
 import OrderCard from '../../components/OrderCard.vue'
@@ -62,6 +67,8 @@ const hasMore = ref(true)
 const loading = ref(false)
 
 const sheetVisible = ref(false)
+/** 弹层打开时锁页面滚动（仅小程序生效） */
+const pageStyle = pageStyleWhen(() => sheetVisible.value)
 const sheetOrderId = ref(0)
 
 function openSheet(id: number) {
@@ -146,7 +153,7 @@ onReachBottom(() => {
 <style lang="scss" scoped>
 .page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: #f6f2e9;
   padding-bottom: 220rpx;
 }
 
@@ -167,7 +174,7 @@ onReachBottom(() => {
   width: 88rpx;
   height: 88rpx;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #ff8a3d, #ff6b35);
+  background: linear-gradient(135deg, #35604f, #2f5a4c);
   color: #fff;
   font-size: 38rpx;
   font-weight: 700;
@@ -185,13 +192,13 @@ onReachBottom(() => {
   display: block;
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .copy {
   font-size: 22rpx;
-  color: #ff6b35;
-  background: #fff1ea;
+  color: #2f5a4c;
+  background: #e9efe9;
   border-radius: 999rpx;
   padding: 8rpx 22rpx;
 }
@@ -199,11 +206,11 @@ onReachBottom(() => {
 .notice {
   display: block;
   margin-top: 20rpx;
-  background: #fafafa;
+  background: #f8f4ec;
   border-radius: 14rpx;
   padding: 16rpx 20rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: #5f6b63;
 }
 
 .list {
@@ -226,11 +233,11 @@ onReachBottom(() => {
   display: flex;
   gap: 8rpx;
   font-size: 23rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .sorter .on {
-  color: #ff6b35;
+  color: #2f5a4c;
   font-weight: 600;
 }
 
@@ -241,7 +248,7 @@ onReachBottom(() => {
 .footer-tip {
   text-align: center;
   font-size: 22rpx;
-  color: #b8bcc2;
+  color: #b3ada1;
   padding: 24rpx 0;
 }
 
@@ -262,7 +269,7 @@ onReachBottom(() => {
   height: 84rpx;
   line-height: 84rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #ff8a3d, #ff6b35);
+  background: linear-gradient(135deg, #35604f, #2f5a4c);
   color: #fff;
   font-size: 28rpx;
   font-weight: 700;
@@ -273,8 +280,8 @@ onReachBottom(() => {
   height: 84rpx;
   line-height: 84rpx;
   border-radius: 999rpx;
-  background: #f5f5f7;
-  color: #6b7280;
+  background: #f6f2e9;
+  color: #5f6b63;
   font-size: 26rpx;
   padding: 0;
 }

@@ -2,6 +2,7 @@
 import json
 import urllib.request
 import urllib.error
+from urllib.parse import quote
 
 BASE = "http://127.0.0.1:8080"
 ok = 0
@@ -211,6 +212,67 @@ check("结案后写不了补充说明",
 # 早期「攒够 10 条批条自动结案」的规则已废弃：只有 1 票的单子仍处于审批中
 r = call("GET", f"/app/order/{order_id}", None, alice)
 check("票数少也不提前结案", r["data"]["order"].get("status") == "0", str(r["data"]["order"].get("status")))
+
+
+print("== 16. 审批方式 / 理由选填 / 我的筛选 ==")
+# 单人审批：一人表态就出结果
+r = call("POST", "/app/order", {
+    "title": "单人审批的一本书",
+    "price": 59,
+    "reason": "想看点轻松的东西，通勤路上翻翻",
+    "visibility": "0",
+    "approveMode": "0",
+    "durationHours": 6,
+    "images": ""
+}, alice)
+check("create single-mode", r.get("code") == 200, r.get("msg", ""))
+o3 = r.get("data")
+r = call("GET", f"/app/order/{o3}", None, alice)
+check("approveMode=0", r["data"]["order"].get("approveMode") == "0", str(r["data"]["order"].get("approveMode")))
+
+# 理由不填也能批
+r = call("POST", "/app/vote", {"orderId": o3, "result": "1", "reason": ""}, bob)
+check("不写理由也能批", r.get("code") == 200, r.get("msg", ""))
+r = call("GET", f"/app/order/{o3}", None, alice)
+check("单人审批一人表态即通过", r["data"]["order"].get("status") == "1",
+      str(r["data"]["order"].get("status")))
+check("无理由的批条也能返回", (r["data"].get("votes") or [{}])[0].get("reason") == "",
+      repr((r["data"].get("votes") or [{}])[0].get("reason")))
+
+# 审批方式传非法值要拦住
+r = call("POST", "/app/order", {
+    "title": "审批方式非法", "price": 10, "reason": "就是想试试看会怎样",
+    "visibility": "0", "approveMode": "9", "durationHours": 1
+}, alice)
+check("非法审批方式被拦截", r.get("code") != 200, r.get("msg", ""))
+
+# 我的：搜索
+r = call("GET", "/app/order/mine?type=apply&keyword=" + quote("咖啡机") + "&pageNum=1&pageSize=20", None, alice)
+rows = (r.get("data") or {}).get("rows") or []
+check("搜索命中标题", r.get("code") == 200 and len(rows) >= 1, f"count={len(rows)}")
+check("搜索结果都含关键字", all("咖啡机" in (x.get("title") or "") for x in rows) if rows else False)
+
+r = call("GET", "/app/order/mine?type=apply&keyword=" + quote("不存在的关键词xyz") + "&pageNum=1&pageSize=20", None, alice)
+check("搜不到时返回空", ((r.get("data") or {}).get("total") or 0) == 0,
+      str((r.get("data") or {}).get("total")))
+
+# 我的：状态过滤
+r = call("GET", "/app/order/mine?type=apply&status=2&pageNum=1&pageSize=20", None, alice)
+rows = (r.get("data") or {}).get("rows") or []
+check("状态筛选只返回已驳回", all(x.get("status") == "2" for x in rows) if rows else True,
+      f"count={len(rows)}")
+
+r = call("GET", "/app/order/mine?type=apply&pageNum=1&pageSize=20", None, alice)
+all_total = (r.get("data") or {}).get("total") or 0
+r2 = call("GET", "/app/order/mine?type=apply&status=2&pageNum=1&pageSize=20", None, alice)
+rej_total = (r2.get("data") or {}).get("total") or 0
+check("筛选后总数不大于全部", rej_total <= all_total, f"{rej_total}<={all_total}")
+
+# 新用户默认头像
+r = call("POST", "/app/auth/login", {"code": "dev:avatarcheck", "nickName": "头像检查员"})
+check("新用户带默认头像",
+      str((r.get("data") or {}).get("user", {}).get("avatar", "")).startswith("preset:av"),
+      str((r.get("data") or {}).get("user", {}).get("avatar")))
 
 print()
 print(f"RESULT: pass={ok} fail={fail}")

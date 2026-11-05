@@ -93,6 +93,7 @@ create table apply_order (
     images            varchar(1000)   default ''                 comment '图片，多个用逗号分隔',
     category          varchar(30)     default 'other'            comment '分类',
     visibility        char(1)         default '0'                comment '可见范围（0公开 1群内）',
+    approve_mode      char(1)         default '1'                comment '审批方式（0单人 1多人）',
     duration_hours    int(11)         default 24                 comment '审批时长（小时）',
     status            char(1)         default '0'                comment '状态（0待审批 1已通过 2已驳回 3已撤销 4已过期）',
     pass_count        int(11)         default 0                  comment '通过票数',

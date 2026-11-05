@@ -69,6 +69,9 @@ public class ApplyOrderVo implements Serializable {
     /** 可见范围 */
     private String visibility;
 
+    /** 审批方式（0单人 1多人） */
+    private String approveMode;
+
     /** 审批时长（小时） */
     private Integer durationHours;
 

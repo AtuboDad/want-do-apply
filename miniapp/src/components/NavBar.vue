@@ -30,7 +30,7 @@ const props = withDefaults(
     title: '',
     back: false,
     bg: 'transparent',
-    color: '#1A1A1A',
+    color: '#1D2320',
     transparent: false
   }
 )

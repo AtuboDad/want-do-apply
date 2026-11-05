@@ -14,8 +14,8 @@ from PIL import Image, ImageDraw
 
 SIZE = 81
 S = 4  # 超采样倍数
-GRAY = (154, 160, 166, 255)  # #9AA0A6 未选中
-ORANGE = (255, 107, 53, 255)  # #FF6B35 选中
+GRAY = (154, 148, 136, 255)  # #9A9488 未选中
+GREEN = (47, 90, 76, 255)  # #2F5A4C 选中
 
 OUT_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -127,14 +127,14 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     for name, fn in ICONS:
         render(fn, GRAY).save(os.path.join(OUT_DIR, f"{name}.png"))
-        render(fn, ORANGE).save(os.path.join(OUT_DIR, f"{name}-active.png"))
+        render(fn, GREEN).save(os.path.join(OUT_DIR, f"{name}-active.png"))
         print("wrote", name)
     # 预览图：2x4 拼一张，方便肉眼比对（放 static 外，免得被打包进小程序）
     pad, cell = 12, SIZE
     sheet = Image.new("RGBA", (cell * 4 + pad * 5, cell * 2 + pad * 3), (255, 255, 255, 255))
     for i, (name, fn) in enumerate(ICONS):
         sheet.alpha_composite(render(fn, GRAY), (pad + i * (cell + pad), pad))
-        sheet.alpha_composite(render(fn, ORANGE), (pad + i * (cell + pad), pad * 2 + cell))
+        sheet.alpha_composite(render(fn, GREEN), (pad + i * (cell + pad), pad * 2 + cell))
     prev = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_tabbar_preview.png")
     sheet.save(prev)
     print("preview", prev)

@@ -45,14 +45,18 @@ public interface ApplyOrderMapper extends BaseMapperPlus<ApplyOrder, ApplyOrderV
     /**
      * 我的审批单分页
      *
-     * @param page   分页
-     * @param userId 用户ID
-     * @param type   apply-我发起的 vote-我批过的 favorite-我收藏的
+     * @param page    分页
+     * @param userId  用户ID
+     * @param type    apply-我发起的 vote-我批过的 favorite-我收藏的
+     * @param keyword 标题 / 理由关键字
+     * @param status  状态筛选
      * @return 分页结果
      */
     IPage<ApplyOrderVo> selectMinePage(IPage<ApplyOrderVo> page,
                                        @Param("userId") Long userId,
-                                       @Param("type") String type);
+                                       @Param("type") String type,
+                                       @Param("keyword") String keyword,
+                                       @Param("status") String status);
 
     /**
      * 按分类统计

@@ -50,6 +50,7 @@
           <text class="dot">💬</text>
           <text class="num">{{ item.commentCount || 0 }}</text>
         </view>
+        <text class="mode">{{ modeLabel }}</text>
       </view>
       <view class="action">
         <text v-if="item.status === '0'" class="cd">{{ countdown(item.remainSeconds) }}</text>
@@ -64,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { fullUrl } from '../utils/request'
 import { avatarUrl } from '../utils/avatar'
 import { fromNow, money, countdown, statusText, statusColor } from '../utils/format'
@@ -72,6 +74,9 @@ import type { OrderItem } from '../api/types'
 const props = defineProps<{ item: OrderItem }>()
 
 const emit = defineEmits<{ (e: 'open', id: number): void }>()
+
+/** 单人审批：一个人表态就出结果；多人审批：时长内攒意见 */
+const modeLabel = computed(() => (props.item.approveMode === '0' ? '单人审批' : '多人审批'))
 
 function go() {
   // 由所在页面决定怎么展示详情（现在是弹出圆角弹层，不再是整页跳转）
@@ -82,9 +87,10 @@ function go() {
 <style lang="scss" scoped>
 .order-card {
   background: #fff;
-  border-radius: 24rpx;
+  border-radius: 28rpx;
   padding: 28rpx;
   margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(45, 58, 51, 0.04);
 }
 
 .head {
@@ -97,7 +103,7 @@ function go() {
   width: 68rpx;
   height: 68rpx;
   border-radius: 50%;
-  background: #f5f5f7;
+  background: #f4efe4;
   flex-shrink: 0;
 }
 
@@ -110,21 +116,21 @@ function go() {
 .name {
   font-size: 26rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1d2320;
 }
 
 .tag-mine {
   font-size: 20rpx;
-  color: #ff6b35;
-  background: #fff1ea;
+  color: #2f5a4c;
+  background: #e9efe9;
   border-radius: 6rpx;
   padding: 0 8rpx;
 }
 
 .tag-group {
   font-size: 20rpx;
-  color: #6b7280;
-  background: #f2f2f5;
+  color: #7a7466;
+  background: #f4efe4;
   border-radius: 6rpx;
   padding: 0 8rpx;
   max-width: 200rpx;
@@ -135,7 +141,7 @@ function go() {
 
 .time {
   font-size: 22rpx;
-  color: #9aa0a6;
+  color: #a8a294;
   margin-top: 4rpx;
 }
 
@@ -144,7 +150,7 @@ function go() {
   border: 1rpx solid;
   border-radius: 999rpx;
   padding: 2rpx 16rpx;
-  opacity: 0.9;
+  opacity: 0.95;
   flex-shrink: 0;
 }
 
@@ -155,7 +161,7 @@ function go() {
 .title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1d2320;
   line-height: 1.4;
 }
 
@@ -168,13 +174,13 @@ function go() {
 
 .currency {
   font-size: 24rpx;
-  color: #ff6b35;
+  color: #b04b3c;
   font-weight: 600;
 }
 
 .price {
   font-size: 44rpx;
-  color: #ff6b35;
+  color: #b04b3c;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -182,7 +188,7 @@ function go() {
 .tag-top {
   font-size: 20rpx;
   color: #fff;
-  background: #ff6b35;
+  background: #c08a2e;
   border-radius: 6rpx;
   padding: 2rpx 10rpx;
   margin-left: 12rpx;
@@ -192,7 +198,7 @@ function go() {
 .reason {
   margin-top: 12rpx;
   font-size: 26rpx;
-  color: #6b7280;
+  color: #6f6a5e;
   line-height: 1.6;
 }
 
@@ -207,7 +213,7 @@ function go() {
   width: 160rpx;
   height: 160rpx;
   border-radius: 16rpx;
-  background: #f5f5f7;
+  background: #f4efe4;
 }
 
 .more {
@@ -228,7 +234,7 @@ function go() {
 .foot {
   margin-top: 24rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid #f0f0f2;
+  border-top: 1rpx solid #f1ebde;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -236,7 +242,8 @@ function go() {
 
 .votes {
   display: flex;
-  gap: 24rpx;
+  align-items: center;
+  gap: 20rpx;
 }
 
 .vote {
@@ -251,19 +258,27 @@ function go() {
 
 .vote .num {
   font-size: 24rpx;
-  color: #6b7280;
+  color: #6f6a5e;
 }
 
 .pass .dot {
-  color: #22c55e;
+  color: #2f7d5b;
 }
 
 .reject .dot {
-  color: #ef4444;
+  color: #b04b3c;
 }
 
 .comment .dot {
   font-size: 20rpx;
+}
+
+.mode {
+  font-size: 20rpx;
+  color: #9a9488;
+  background: #f7f3ea;
+  border-radius: 999rpx;
+  padding: 2rpx 14rpx;
 }
 
 .action {
@@ -274,7 +289,7 @@ function go() {
 
 .cd {
   font-size: 22rpx;
-  color: #9aa0a6;
+  color: #a8a294;
 }
 
 .voted {
@@ -284,18 +299,18 @@ function go() {
 }
 
 .is-pass {
-  color: #22c55e;
-  background: #ecfdf5;
+  color: #2f7d5b;
+  background: #e9f2ec;
 }
 
 .is-reject {
-  color: #ef4444;
-  background: #fef2f2;
+  color: #b04b3c;
+  background: #fbece9;
 }
 
 .go {
   font-size: 24rpx;
-  color: #ff6b35;
+  color: #2f5a4c;
   font-weight: 600;
 }
 </style>

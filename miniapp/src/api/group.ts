@@ -64,7 +64,7 @@ export function markRead(ids?: number[]): Promise<void> {
 /** 举报 */
 export function report(data: {
   targetType: string
-  targetId: number
+  targetId: number | string
   reasonType?: string
   content?: string
 }): Promise<number> {

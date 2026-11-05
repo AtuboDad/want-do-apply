@@ -54,18 +54,18 @@ function onLike() {
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
-  background: #f5f5f7;
+  background: #f6f2e9;
 }
 
 .name {
   font-size: 25rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1d2320;
 }
 
 .time {
   font-size: 21rpx;
-  color: #9aa0a6;
+  color: #9a9488;
   margin-top: 2rpx;
   display: block;
 }
@@ -78,13 +78,13 @@ function onLike() {
 }
 
 .pass {
-  color: #22c55e;
-  background: #ecfdf5;
+  color: #2f7d5b;
+  background: #e9f2ec;
 }
 
 .reject {
-  color: #ef4444;
-  background: #fef2f2;
+  color: #b04b3c;
+  background: #fbece9;
 }
 
 .reason {
@@ -114,10 +114,10 @@ function onLike() {
 
 .count {
   font-size: 23rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .liked .count {
-  color: #ef4444;
+  color: #b04b3c;
 }
 </style>

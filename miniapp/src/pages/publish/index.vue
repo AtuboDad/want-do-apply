@@ -86,9 +86,30 @@
         </view>
       </view>
 
+      <!-- 审批方式 -->
       <view class="field">
-        <text class="label">审批多久</text>
-        <text class="sub-label">到点后按「少数服从多数」出结果，期间谁都能批</text>
+        <text class="label">审批方式</text>
+        <view class="modes">
+          <view class="mode" :class="{ on: form.approveMode === '0' }" @tap="form.approveMode = '0'">
+            <text class="mode-title">单人审批</text>
+            <text class="mode-desc">一人处理后结束</text>
+          </view>
+          <view class="mode" :class="{ on: form.approveMode === '1' }" @tap="form.approveMode = '1'">
+            <text class="mode-title">多人审批</text>
+            <text class="mode-desc">汇总多人意见</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="label">{{ form.approveMode === '0' ? '多久没结论自动结束' : '审批多久' }}</text>
+        <text class="sub-label">
+          {{
+            form.approveMode === '0'
+              ? '有人表态就立刻出结果，这段时间只是兜底'
+              : '到点后按「少数服从多数」出结果，期间谁都能批'
+          }}
+        </text>
         <view class="chips">
           <text
             v-for="d in DURATIONS"
@@ -106,7 +127,9 @@
         {{ submitting ? '提交中…' : '发到广场' }}
       </button>
 
-      <text class="tip">发出去谁都能审，{{ durationLabel(form.durationHours) }}后自动结案；中途还能补一句说明</text>
+      <text class="tip">
+        发出去谁都能审，{{ durationLabel(form.durationHours) }}后自动结束；中途还能补一句说明
+      </text>
     </view>
   </view>
 </template>
@@ -142,6 +165,8 @@ const form = ref({
   substitute: '',
   category: 'other',
   visibility: '0',
+  /** 审批方式：0 单人 1 多人 */
+  approveMode: '1',
   durationHours: 2,
   groupId: null as number | null
 })
@@ -239,6 +264,7 @@ async function submit() {
       images: images.value.join(','),
       category: form.value.category,
       visibility: form.value.visibility,
+      approveMode: form.value.approveMode,
       durationHours: form.value.durationHours,
       groupId: form.value.groupId
     })
@@ -257,7 +283,16 @@ async function submit() {
 }
 
 function reset() {
-  form.value = { title: '', reason: '', substitute: '', category: 'other', visibility: '0', durationHours: 2, groupId: null }
+  form.value = {
+    title: '',
+    reason: '',
+    substitute: '',
+    category: 'other',
+    visibility: '0',
+    approveMode: '1',
+    durationHours: 2,
+    groupId: null
+  }
   priceText.value = ''
   images.value = []
 }
@@ -270,15 +305,15 @@ onShow(() => {
 <style lang="scss" scoped>
 .page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: #f6f2e9;
   padding-bottom: 60rpx;
 }
 
 .hero {
-  background: linear-gradient(135deg, #ff8a3d 0%, #ff6b35 55%, #f2542d 100%);
+  background: linear-gradient(150deg, #35604f 0%, #2a4e41 58%, #234439 100%);
   padding-bottom: 60rpx;
-  border-bottom-left-radius: 36rpx;
-  border-bottom-right-radius: 36rpx;
+  border-bottom-left-radius: 40rpx;
+  border-bottom-right-radius: 40rpx;
 }
 
 .hero-inner {
@@ -288,14 +323,14 @@ onShow(() => {
 .hero-title {
   font-size: 44rpx;
   font-weight: 800;
-  color: #fff;
+  color: #fbf7ee;
 }
 
 .hero-sub {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(251, 247, 238, 0.76);
 }
 
 .form {
@@ -304,7 +339,7 @@ onShow(() => {
 
 .field {
   background: #fff;
-  border-radius: 24rpx;
+  border-radius: 28rpx;
   padding: 28rpx;
   margin-bottom: 20rpx;
 }
@@ -312,18 +347,18 @@ onShow(() => {
 .label {
   font-size: 27rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1d2320;
 }
 
 .req {
-  color: #ff6b35;
+  color: #b04b3c;
 }
 
 .sub-label {
   display: block;
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .input {
@@ -331,7 +366,7 @@ onShow(() => {
   font-size: 30rpx;
   height: 60rpx;
   line-height: 60rpx;
-  color: #1a1a1a;
+  color: #1d2320;
 }
 
 .price-input {
@@ -343,14 +378,14 @@ onShow(() => {
 
 .yuan {
   font-size: 32rpx;
-  color: #ff6b35;
+  color: #b04b3c;
   font-weight: 700;
 }
 
 .input.price {
   font-size: 44rpx;
   font-weight: 700;
-  color: #ff6b35;
+  color: #b04b3c;
   margin-top: 0;
   height: 70rpx;
 }
@@ -359,18 +394,20 @@ onShow(() => {
   margin-top: 16rpx;
   width: 100%;
   min-height: 160rpx;
-  background: #fafafa;
+  background: #f8f4ec;
   border-radius: 16rpx;
   padding: 22rpx;
   font-size: 28rpx;
   line-height: 1.65;
+  color: #1d2320;
+  box-sizing: border-box;
 }
 
 .counter {
   display: block;
   text-align: right;
   font-size: 21rpx;
-  color: #b8bcc2;
+  color: #b3ada1;
   margin-top: 8rpx;
 }
 
@@ -391,7 +428,7 @@ onShow(() => {
   width: 180rpx;
   height: 180rpx;
   border-radius: 16rpx;
-  background: #f5f5f7;
+  background: #f4efe4;
 }
 
 .del {
@@ -413,8 +450,8 @@ onShow(() => {
   width: 180rpx;
   height: 180rpx;
   border-radius: 16rpx;
-  background: #fafafa;
-  border: 2rpx dashed #e0e0e4;
+  background: #faf6ee;
+  border: 2rpx dashed #ddd5c4;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -422,29 +459,69 @@ onShow(() => {
 
 .plus {
   font-size: 56rpx;
-  color: #c4c8ce;
+  color: #b3ada1;
   line-height: 1;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 14rpx;
+  gap: 12rpx;
   margin-top: 18rpx;
 }
 
 .chip {
-  font-size: 25rpx;
-  color: #6b7280;
-  background: #f5f5f7;
+  font-size: 24rpx;
+  color: #5f6b63;
+  background: #f4efe4;
   border-radius: 999rpx;
-  padding: 10rpx 26rpx;
+  padding: 10rpx 20rpx;
 }
 
 .chip.on {
-  color: #fff;
-  background: #ff6b35;
+  color: #fbf7ee;
+  background: #2f5a4c;
   font-weight: 600;
+}
+
+/* ---------- 审批方式 ---------- */
+.modes {
+  display: flex;
+  gap: 18rpx;
+  margin-top: 18rpx;
+}
+
+.mode {
+  flex: 1;
+  border: 2rpx solid #eee7d8;
+  border-radius: 24rpx;
+  padding: 24rpx 22rpx;
+  background: #fff;
+  transition: all 0.16s ease;
+}
+
+.mode.on {
+  border-color: #2f5a4c;
+  background: #edf3ee;
+  box-shadow: inset 0 0 0 1rpx rgba(47, 90, 76, 0.12);
+}
+
+.mode-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1d2320;
+}
+
+.mode.on .mode-title {
+  color: #234439;
+}
+
+.mode-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #8b8578;
 }
 
 .visibility {
@@ -455,40 +532,40 @@ onShow(() => {
 
 .v-item {
   flex: 1;
-  border: 2rpx solid #f0f0f2;
-  border-radius: 18rpx;
+  border: 2rpx solid #eee7d8;
+  border-radius: 20rpx;
   padding: 20rpx;
 }
 
 .v-item.on {
-  border-color: #ff6b35;
-  background: #fff7f2;
+  border-color: #2f5a4c;
+  background: #edf3ee;
 }
 
 .v-title {
   display: block;
   font-size: 26rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1d2320;
 }
 
 .v-desc {
   display: block;
   margin-top: 6rpx;
   font-size: 21rpx;
-  color: #9aa0a6;
+  color: #8b8578;
 }
 
 .group-pick {
   margin-top: 16rpx;
-  background: #fafafa;
+  background: #f8f4ec;
   border-radius: 16rpx;
   padding: 22rpx;
   font-size: 26rpx;
 }
 
 .placeholder {
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .submit {
@@ -496,18 +573,18 @@ onShow(() => {
   height: 92rpx;
   line-height: 92rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #ff8a3d, #ff6b35);
-  color: #fff;
+  background: #2f5a4c;
+  color: #fbf7ee;
   font-size: 32rpx;
   font-weight: 700;
-  box-shadow: 0 8rpx 24rpx rgba(255, 107, 53, 0.3);
+  box-shadow: 0 10rpx 24rpx rgba(47, 90, 76, 0.22);
 }
 
 .tip {
   display: block;
   text-align: center;
   font-size: 22rpx;
-  color: #b8bcc2;
+  color: #b3ada1;
   margin-top: 24rpx;
 }
 </style>

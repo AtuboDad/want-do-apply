@@ -27,8 +27,7 @@ public class ApplyVoteBo implements Serializable {
     @NotBlank(message = "请选择审批结论")
     private String result;
 
-    /** 批条理由 */
-    @NotBlank(message = "写点理由吧，这是灵魂")
-    @Size(min = 2, max = 200, message = "批条理由需要2-200个字符")
+    /** 批条理由（可选，想说就说） */
+    @Size(max = 200, message = "批条理由最多200个字符")
     private String reason;
 }

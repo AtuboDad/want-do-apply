@@ -1,9 +1,28 @@
+import { computed } from 'vue'
+
 /**
- * 锁住底层页面滚动。
+ * 绑定给 <page-meta :page-style>。
  *
- * 只有 H5 会出现「弹层打开后，鼠标滚轮把下面那一页滚走」——
- * 因为 H5 的页面滚动是浏览器原生滚动，弹层再高也拦不住遮罩外面的滚轮和触摸。
- * 小程序端的页面滚动是原生的，遮罩上的 catchtouchmove 已经够了，所以这里是空实现。
+ * 小程序里页面滚动是原生的，弹层再高也挡不住 touchmove 冒泡到页面，
+ * 官方办法就是给 page 加 overflow:hidden —— 只在小程序端生效。
+ * 用法：const pageStyle = pageStyleWhen(() => sheetVisible.value)
+ */
+export function pageStyleWhen(opened: () => boolean) {
+  return computed(() => (opened() ? 'overflow: hidden;' : ''))
+}
+
+/**
+ * 锁住底层页面滚动 + 把滚轮喂给弹层。
+ *
+ * 两类平台各有各的坑：
+ *
+ * 1) H5：uni-app 的页面滚动容器是 `body`（overflow-y:auto），不是 html。
+ *    只锁 html 没用，只记录 window.scrollY 也没用（这里恒为 0），
+ *    关掉弹层后页面会跳回顶部。所以 html / body 都锁，滚动位置也双双记住。
+ *
+ * 2) 小程序：页面滚动是原生的，`position:fixed` 的遮罩挡不住 touchmove 冒泡，
+ *    手指在弹层上划一下，底下那页就跟着动。所以由页面上的 <page-meta> 改
+ *    page-style 加 overflow:hidden（见各页 template 顶部），这里不重复处理。
  *
  * 用引用计数：嵌套打开（详情弹层里再开批阅弹窗）时，只有最外层关闭才真正解锁。
  */
@@ -12,7 +31,8 @@ interface SavedState {
   htmlOverflow: string
   bodyOverflow: string
   bodyPaddingRight: string
-  scrollY: number
+  windowY: number
+  bodyTop: number
 }
 
 let depth = 0
@@ -29,7 +49,8 @@ export function lockPageScroll(): void {
     htmlOverflow: html.style.overflow,
     bodyOverflow: body.style.overflow,
     bodyPaddingRight: body.style.paddingRight,
-    scrollY: window.scrollY || html.scrollTop || 0
+    windowY: window.scrollY || 0,
+    bodyTop: body.scrollTop || 0
   }
 
   // 滚动条消失会让页面横向抖一下，补上等宽内边距（移动端模拟下宽度为 0，不影响）
@@ -49,25 +70,38 @@ export function unlockPageScroll(): void {
 
   const html = document.documentElement
   const body = document.body
-  const restoreY = saved.scrollY
+  const { windowY, bodyTop } = saved
 
   html.style.overflow = saved.htmlOverflow
   body.style.overflow = saved.bodyOverflow
   body.style.paddingRight = saved.bodyPaddingRight
   saved = null
 
-  // 在 html 上设 overflow:hidden 会把滚动位置清零，解锁后补回来
-  if (restoreY > 0) {
-    window.scrollTo(0, restoreY)
-  }
+  // 设 overflow:hidden 会把滚动位置清零，解锁后补回来
+  if (bodyTop > 0) body.scrollTop = bodyTop
+  if (windowY > 0) window.scrollTo(0, windowY)
   // #endif
 }
 
 /**
- * 把滚轮事件喂给弹层内部的 scroll-view。
+ * 弹层底部要额外避让的高度（px）。
  *
- * uni-app 编译到 H5 后，scroll-view 真正的滚动容器是里面那层 overflow:auto 的 div，
- * 鼠标停在操作栏、卡片留白这些「不可滚」的地方时，滚轮会直接冒泡到页面。
+ * 小程序：页面视口本身不含 tabBar，弹层 bottom:0 就刚好在菜单栏上方，不用避让。
+ * H5：tabBar 是一个 position:fixed、z-index:998 的 DOM 节点，会压在弹层上，
+ *     所以量一下它有多高，让弹层悬在它上面。
+ */
+export function tabBarInsetPx(): number {
+  // #ifdef H5
+  const el = document.querySelector('uni-tabbar') as HTMLElement | null
+  if (el) return el.offsetHeight || 0
+  // #endif
+  return 0
+}
+
+/**
+ * 把滚轮事件喂给弹层内部的滚动区。
+ *
+ * 鼠标停在操作栏、卡片留白这些「不可滚」的地方时，滚轮原本会冒泡到页面。
  * 这里统一接管：只要滚轮落在弹层里，就滚详情区。
  */
 export function forwardWheelToSheet(root: HTMLElement | null, event: WheelEvent): void {
@@ -85,12 +119,24 @@ export function forwardWheelToSheet(root: HTMLElement | null, event: WheelEvent)
   scroller.scrollTop = Math.max(0, Math.min(next, max))
 }
 
+/**
+ * 找弹层里真正能滚的那一层。
+ *
+ * 不写死 class：uni-app 各版本 scroll-view 的 DOM 结构、类名会变
+ * （H5 下真身是第二层 .uni-scroll-view，第一层只是外壳）。
+ * 直接按「overflow-y 是 auto/scroll 且内容比容器高」来找，最稳。
+ */
 function pickScroller(root: HTMLElement): HTMLElement | null {
-  const list = root.querySelectorAll<HTMLElement>('.panel-scroll .uni-scroll-view')
-  // 由内向外找第一个真的能滚的
-  for (let i = list.length - 1; i >= 0; i--) {
-    const el = list[i]
-    if (el.scrollHeight > el.clientHeight + 1) return el
+  const nodes = root.querySelectorAll<HTMLElement>('*')
+  let best: HTMLElement | null = null
+  for (let i = 0; i < nodes.length; i++) {
+    const el = nodes[i]
+    if (el.clientHeight === 0) continue
+    if (el.scrollHeight <= el.clientHeight + 1) continue
+    const oy = getComputedStyle(el).overflowY
+    if (oy !== 'auto' && oy !== 'scroll') continue
+    // 越靠里越优先（真身通常在内层）
+    best = el
   }
-  return list.length ? list[list.length - 1] : null
+  return best
 }

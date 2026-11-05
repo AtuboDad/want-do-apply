@@ -67,18 +67,18 @@ export function statusText(status?: string): string {
     case '1': return '已通过'
     case '2': return '已驳回'
     case '3': return '已撤销'
-    case '4': return '已过期'
+    case '4': return '已结束'
     default: return ''
   }
 }
 
-/** 审批状态配色 */
+/** 审批状态配色（与新版暖米 + 墨绿 + 砖红色板一致） */
 export function statusColor(status?: string): string {
   switch (status) {
-    case '0': return '#FF6B35'
-    case '1': return '#22C55E'
-    case '2': return '#EF4444'
-    default: return '#9AA0A6'
+    case '0': return '#C08A2E'
+    case '1': return '#2F7D5B'
+    case '2': return '#B04B3C'
+    default: return '#9A9488'
   }
 }
 
@@ -95,4 +95,14 @@ export const CATEGORIES = [
 
 export function categoryLabel(v?: string): string {
   return CATEGORIES.find((c) => c.value === v)?.label || '其他'
+}
+
+/** 审批方式文案：单人 / 多人 */
+export function modeText(mode?: string): string {
+  return mode === '0' ? '单人审批' : '多人审批'
+}
+
+/** 审批方式的规则说明 */
+export function modeDesc(mode?: string): string {
+  return mode === '0' ? '一人处理后结束' : '汇总多人意见'
 }

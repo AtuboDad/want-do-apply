@@ -10,7 +10,9 @@
         </view>
 
         <!-- 商品主信息 -->
-        <view class="card">
+        <view class="card hero-card" :class="{ 'has-stamp': !!stampSrc }">
+          <!-- 结论印章：通过 / 驳回 / 已结束 -->
+          <image v-if="stampSrc" class="stamp" :src="stampSrc" mode="aspectFit" />
           <text class="title">{{ order.title }}</text>
           <view class="price-row">
             <text class="currency">¥</text>
@@ -28,19 +30,22 @@
         <!-- 审批规则 -->
         <view class="card rule-card">
           <text class="rule-label">审批规则</text>
-          <text class="rule-main">多人审批 · {{ durationLabel(order.durationHours) }}后自动结束</text>
+          <text class="rule-main">{{ modeText(order.approveMode) }} · {{ ruleSuffix }}</text>
           <view class="rule-meta">
             <text class="rule-count">已表态 {{ order.voteCount || 0 }} 人</text>
             <text class="rule-status" :style="{ color: statusColor(order.status) }">
               {{ statusText(order.status) }}
             </text>
           </view>
+          <!-- 0 票时不画双色条：否则 100% 红条会让人误以为全票驳回 -->
           <view class="rule-bar">
-            <view class="rb-pass" :style="{ width: passPercent + '%' }" />
-            <view class="rb-reject" :style="{ width: 100 - passPercent + '%' }" />
+            <template v-if="(order.voteCount || 0) > 0">
+              <view class="rb-pass" :style="{ width: passPercent + '%' }" />
+              <view class="rb-reject" :style="{ width: 100 - passPercent + '%' }" />
+            </template>
           </view>
           <view class="rule-foot">
-            <text class="rf-left">少数服从多数</text>
+            <text class="rf-left">{{ order.approveMode === '0' ? '一人表态即出结果' : '少数服从多数' }}</text>
             <text v-if="order.status === '0'" class="rf-cd">还剩 {{ countdown(order.remainSeconds) }}</text>
           </view>
 
@@ -73,10 +78,13 @@
               <text class="resp-sep">·</text>
               <text class="resp-nick">{{ v.userNickName || '匿名审批员' }}</text>
               <view class="resp-more" @tap.stop="voteMore(v)">
-                <text>···</text>
+                <text class="dot" />
+                <text class="dot" />
+                <text class="dot" />
               </view>
             </view>
-            <text class="resp-text">{{ v.reason }}</text>
+            <text v-if="v.reason" class="resp-text">{{ v.reason }}</text>
+            <text v-else class="resp-text quiet">没写理由，投完就跑</text>
             <view class="resp-foot">
               <text class="resp-time">{{ dateTime(v.createTime) }} · 北京时间</text>
               <view class="flower" :class="{ on: v.liked }" @tap.stop="onLike(v.id)">
@@ -155,7 +163,7 @@
         <button class="btn pass" @tap="openVote('1')">通过</button>
       </view>
       <view v-else class="voted-tip">
-        <text>{{ order.myVoted ? '你已经批过这单了，等结果吧' : '这单已经结案' }}</text>
+        <text>{{ order.myVoted ? '你已经批过这单了，等结果吧' : '审批已结束' }}</text>
       </view>
     </view>
 
@@ -166,11 +174,11 @@
           <text class="sheet-title">{{ voteResult === '1' ? '通过这单' : '驳回这单' }}</text>
           <text class="sheet-close" @tap="closeVote">✕</text>
         </view>
-        <text class="sheet-tip">写点理由，这是灵魂</text>
+        <text class="sheet-tip">想说说就写两句，不写也行</text>
         <textarea
           v-model="voteReason"
           class="sheet-input"
-          :placeholder="voteResult === '1' ? '说说为什么该买…' : '说说为什么不该买…'"
+          :placeholder="voteResult === '1' ? '说说为什么该买…（可不填）' : '说说为什么不该买…（可不填）'"
           maxlength="200"
           :focus="true"
           auto-height
@@ -245,12 +253,13 @@ import {
   statusText,
   statusColor,
   dateTime,
-  durationLabel
+  durationLabel,
+  modeText
 } from '../utils/format'
 import { ensureLogin } from '../utils/auth'
 import type { OrderItem, VoteItem, CommentItem } from '../api/types'
 
-const props = defineProps<{ orderId: number }>()
+const props = defineProps<{ orderId: number | string }>()
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
@@ -276,6 +285,25 @@ const passPercent = computed(() => {
   const r = order.value?.rejectCount || 0
   if (p + r === 0) return 0
   return Math.round((p / (p + r)) * 100)
+})
+
+/** 结论印章：已出结果的单子才盖，图是 scripts/gen_stamps.py 生成的 */
+const stampSrc = computed(() => {
+  switch (order.value?.status) {
+    case '1': return '/static/stamps/stamp-pass.png'
+    case '2': return '/static/stamps/stamp-reject.png'
+    case '3': return '/static/stamps/stamp-cancel.png'
+    case '4': return '/static/stamps/stamp-closed.png'
+    default: return ''
+  }
+})
+
+/** 规则那句尾巴：单人审批说「一人处理后结束」，多人审批说时长 */
+const ruleSuffix = computed(() => {
+  const o = order.value
+  if (!o) return ''
+  if (o.approveMode === '0') return '一人处理后结束'
+  return `${durationLabel(o.durationHours)}后自动结束`
 })
 
 const canVote = computed(() => {
@@ -318,7 +346,7 @@ watch(
   { immediate: true }
 )
 
-async function doReport(targetType = '1', targetId?: number) {
+async function doReport(targetType = '1', targetId?: number | string) {
   try {
     await report({ targetType, targetId: targetId || props.orderId, reasonType: 'other', content: '用户举报' })
     uni.showToast({ title: '已提交举报', icon: 'none' })
@@ -346,17 +374,14 @@ function closeVote() {
 }
 
 async function doVote() {
-  if (voteReason.value.trim().length < 2) {
-    uni.showToast({ title: '理由至少写 2 个字', icon: 'none' })
-    return
-  }
+  // 理由选填：不写也能批，写了更好玩
   const settled = await submitVote({
     orderId: props.orderId,
     result: voteResult.value,
     reason: voteReason.value.trim()
   })
   voteVisible.value = false
-  uni.showToast({ title: settled ? '这单结案了' : '批完啦，等大家投票', icon: 'none' })
+  uni.showToast({ title: settled ? '审批已结束' : '批完啦，等大家投票', icon: 'none' })
   await load()
 }
 
@@ -521,7 +546,7 @@ defineExpose({ onMore, reload: load })
   padding: 120rpx 0;
   text-align: center;
   font-size: 26rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 /* ---------- 商品图 ---------- */
@@ -534,7 +559,7 @@ defineExpose({ onMore, reload: load })
   width: 100%;
   height: 340rpx;
   border-radius: 24rpx;
-  background: #ececf0;
+  background: #efe8d9;
 }
 
 .hero-badge {
@@ -551,7 +576,7 @@ defineExpose({ onMore, reload: load })
 /* ---------- 通用卡片 ---------- */
 .card {
   background: #fff;
-  border-radius: 26rpx;
+  border-radius: 28rpx;
   padding: 30rpx 28rpx;
   margin-bottom: 18rpx;
 }
@@ -565,7 +590,7 @@ defineExpose({ onMore, reload: load })
 .card-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #1f1f1f;
+  color: #1d2320;
 }
 
 .title {
@@ -573,7 +598,27 @@ defineExpose({ onMore, reload: load })
   font-size: 36rpx;
   font-weight: 700;
   line-height: 1.45;
-  color: #1f1f1f;
+  color: #1d2320;
+}
+
+/* 有印章时标题让出右上角，避免压字 */
+.hero-card {
+  position: relative;
+}
+
+.hero-card.has-stamp .title {
+  padding-right: 156rpx;
+}
+
+.stamp {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  width: 168rpx;
+  height: 168rpx;
+  transform: rotate(-13deg);
+  opacity: 0.95;
+  pointer-events: none;
 }
 
 .price-row {
@@ -585,13 +630,13 @@ defineExpose({ onMore, reload: load })
 
 .currency {
   font-size: 26rpx;
-  color: #ff6b35;
+  color: #b04b3c;
   font-weight: 700;
 }
 
 .price {
   font-size: 54rpx;
-  color: #ff6b35;
+  color: #b04b3c;
   font-weight: 800;
   line-height: 1.1;
 }
@@ -599,7 +644,7 @@ defineExpose({ onMore, reload: load })
 .tag-top {
   font-size: 19rpx;
   color: #fff;
-  background: #ff6b35;
+  background: #c08a2e;
   border-radius: 6rpx;
   padding: 2rpx 10rpx;
   margin-left: 12rpx;
@@ -612,45 +657,45 @@ defineExpose({ onMore, reload: load })
   gap: 12rpx;
   margin-top: 20rpx;
   padding-top: 18rpx;
-  border-top: 1rpx solid #f4f4f6;
+  border-top: 1rpx solid #f1ebde;
 }
 
 .avatar {
   width: 52rpx;
   height: 52rpx;
   border-radius: 50%;
-  background: #f5f5f7;
+  background: #f4efe4;
 }
 
 .a-name {
   font-size: 24rpx;
-  color: #4b4b4b;
+  color: #4b5350;
   font-weight: 600;
 }
 
 .a-time {
   font-size: 22rpx;
-  color: #a8adb5;
+  color: #a8a294;
 }
 
 .a-group {
   margin-left: auto;
   font-size: 20rpx;
-  color: #8a8f98;
-  background: #f4f4f6;
+  color: #7a7466;
+  background: #f4efe4;
   border-radius: 999rpx;
   padding: 4rpx 16rpx;
 }
 
 /* ---------- 审批规则 ---------- */
 .rule-card {
-  background: #fffaf3;
+  background: #faf3e3;
 }
 
 .rule-label {
   display: block;
   font-size: 22rpx;
-  color: #a98d63;
+  color: #a58c5c;
   letter-spacing: 1rpx;
 }
 
@@ -659,7 +704,7 @@ defineExpose({ onMore, reload: load })
   margin-top: 10rpx;
   font-size: 32rpx;
   font-weight: 700;
-  color: #2b2b2b;
+  color: #234439;
 }
 
 .rule-meta {
@@ -671,7 +716,7 @@ defineExpose({ onMore, reload: load })
 
 .rule-count {
   font-size: 26rpx;
-  color: #8a6d3b;
+  color: #8a7442;
 }
 
 .rule-status {
@@ -684,17 +729,17 @@ defineExpose({ onMore, reload: load })
   height: 14rpx;
   border-radius: 999rpx;
   overflow: hidden;
-  background: #f0e6d6;
+  background: #ece0c8;
   margin-top: 16rpx;
 }
 
 .rb-pass {
-  background: #34b06a;
+  background: #2f7d5b;
   height: 100%;
 }
 
 .rb-reject {
-  background: #d8685a;
+  background: #b04b3c;
   height: 100%;
 }
 
@@ -704,24 +749,24 @@ defineExpose({ onMore, reload: load })
   justify-content: space-between;
   margin-top: 14rpx;
   font-size: 22rpx;
-  color: #b0a08a;
+  color: #b0a184;
 }
 
 .rf-cd {
-  color: #c08a3e;
+  color: #a8762a;
   font-weight: 600;
 }
 
 .note {
   margin-top: 22rpx;
   padding-top: 22rpx;
-  border-top: 1rpx dashed #ecdcc4;
+  border-top: 1rpx dashed #e7d4b2;
 }
 
 .note-label {
   display: block;
   font-size: 22rpx;
-  color: #a98d63;
+  color: #a58c5c;
 }
 
 .note-text {
@@ -729,7 +774,7 @@ defineExpose({ onMore, reload: load })
   margin-top: 8rpx;
   font-size: 26rpx;
   line-height: 1.7;
-  color: #4a4a4a;
+  color: #4a5250;
 }
 
 /* ---------- 回应 ---------- */
@@ -738,16 +783,16 @@ defineExpose({ onMore, reload: load })
   align-items: center;
   gap: 8rpx;
   font-size: 23rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .sorter .on {
-  color: #ff6b35;
+  color: #2f5a4c;
   font-weight: 600;
 }
 
 .sep {
-  color: #e5e5e8;
+  color: #e5dfd1;
 }
 
 .tally-row {
@@ -756,24 +801,24 @@ defineExpose({ onMore, reload: load })
   justify-content: space-between;
   margin-top: 16rpx;
   padding-bottom: 20rpx;
-  border-bottom: 1rpx solid #f4f4f6;
+  border-bottom: 1rpx solid #f1ebde;
 }
 
 .t-pass {
   font-size: 26rpx;
-  color: #2f9e63;
+  color: #2f7d5b;
   font-weight: 600;
 }
 
 .t-reject {
   font-size: 26rpx;
-  color: #c65a4c;
+  color: #b04b3c;
   font-weight: 600;
 }
 
 .resp {
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #f6f6f8;
+  border-bottom: 1rpx solid #f4efe6;
 }
 
 .resp:last-child {
@@ -793,33 +838,41 @@ defineExpose({ onMore, reload: load })
 }
 
 .resp-result.pass {
-  color: #2f9e63;
+  color: #2f7d5b;
 }
 
 .resp-result.reject {
-  color: #c65a4c;
+  color: #b04b3c;
 }
 
 .resp-sep {
-  color: #c9ccd2;
+  color: #cfc8ba;
   font-size: 24rpx;
 }
 
 .resp-nick {
   font-size: 25rpx;
-  color: #6b6b6b;
+  color: #5f6b63;
   max-width: 380rpx;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
+/* 三个点用实体圆点画，比字符「···」整齐 */
 .resp-more {
   margin-left: auto;
-  font-size: 24rpx;
-  color: #b8bcc2;
-  padding: 0 8rpx;
-  letter-spacing: 2rpx;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 10rpx 8rpx;
+}
+
+.resp-more .dot {
+  width: 7rpx;
+  height: 7rpx;
+  border-radius: 50%;
+  background: #c2bcae;
 }
 
 .resp-text {
@@ -827,7 +880,13 @@ defineExpose({ onMore, reload: load })
   margin-top: 12rpx;
   font-size: 28rpx;
   line-height: 1.65;
-  color: #2b2b2b;
+  color: #2b3230;
+}
+
+.resp-text.quiet {
+  color: #b3ada1;
+  font-size: 26rpx;
+  font-style: italic;
 }
 
 .resp-foot {
@@ -839,7 +898,7 @@ defineExpose({ onMore, reload: load })
 
 .resp-time {
   font-size: 21rpx;
-  color: #b0b4bb;
+  color: #b3ada1;
 }
 
 .flower {
@@ -847,15 +906,15 @@ defineExpose({ onMore, reload: load })
   align-items: center;
   gap: 6rpx;
   font-size: 22rpx;
-  color: #a8adb5;
-  background: #fafafa;
+  color: #9a9488;
+  background: #f8f4ec;
   border-radius: 999rpx;
   padding: 6rpx 18rpx;
 }
 
 .flower.on {
-  color: #d9735f;
-  background: #fff2ee;
+  color: #b04b3c;
+  background: #fbece9;
 }
 
 .flower-ico {
@@ -872,27 +931,27 @@ defineExpose({ onMore, reload: load })
   margin-top: 12rpx;
   font-size: 27rpx;
   line-height: 1.75;
-  color: #3d3d3d;
+  color: #3d4542;
 }
 
 .para-label {
   display: block;
   margin-top: 22rpx;
   font-size: 24rpx;
-  color: #8a8f98;
+  color: #8b8578;
 }
 
 .sub-block {
   margin-top: 4rpx;
   padding-top: 12rpx;
-  border-top: 1rpx solid #f4f4f6;
+  border-top: 1rpx solid #f1ebde;
 }
 
 /* ---------- 评论 ---------- */
 .c-add {
   font-size: 23rpx;
-  color: #ff6b35;
-  background: #fff1ea;
+  color: #2f5a4c;
+  background: #e9efe9;
   border-radius: 999rpx;
   padding: 6rpx 20rpx;
 }
@@ -901,7 +960,7 @@ defineExpose({ onMore, reload: load })
   display: flex;
   gap: 16rpx;
   padding: 22rpx 0;
-  border-bottom: 1rpx solid #f6f6f8;
+  border-bottom: 1rpx solid #f4efe6;
 }
 
 .comment:last-child {
@@ -912,7 +971,7 @@ defineExpose({ onMore, reload: load })
   width: 58rpx;
   height: 58rpx;
   border-radius: 50%;
-  background: #f5f5f7;
+  background: #f4efe4;
   flex-shrink: 0;
 }
 
@@ -925,31 +984,31 @@ defineExpose({ onMore, reload: load })
 .c-name {
   font-size: 24rpx;
   font-weight: 600;
-  color: #1f1f1f;
+  color: #1d2320;
 }
 
 .c-time {
   font-size: 21rpx;
-  color: #b8bcc2;
+  color: #b3ada1;
 }
 
 .c-text {
   display: block;
   margin-top: 8rpx;
   font-size: 27rpx;
-  color: #333;
+  color: #2b3230;
   line-height: 1.6;
 }
 
 .c-reply {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .sub {
   margin-top: 12rpx;
-  background: #fafafa;
+  background: #f8f4ec;
   border-radius: 12rpx;
   padding: 14rpx 18rpx;
   font-size: 25rpx;
@@ -957,16 +1016,16 @@ defineExpose({ onMore, reload: load })
 }
 
 .sub-name {
-  color: #6b7280;
+  color: #5f6b63;
   font-weight: 600;
 }
 
 .sub-to {
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .sub-text {
-  color: #333;
+  color: #2b3230;
 }
 
 .bottom-space {
@@ -977,7 +1036,7 @@ defineExpose({ onMore, reload: load })
 .action-bar {
   background: #fff;
   padding: 18rpx 24rpx 22rpx;
-  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -4rpx 18rpx rgba(45, 58, 51, 0.05);
   flex-shrink: 0;
 }
 
@@ -1015,11 +1074,10 @@ defineExpose({ onMore, reload: load })
   border: none;
 }
 
-/* 撤回：白底描边 */
+/* 撤回：浅米底，最弱 */
 .btn.ghost {
-  background: #fff;
-  color: #5a5a5a;
-  border: 1rpx solid #e6e6ea;
+  background: #f1efe6;
+  color: #3a3a38;
   font-weight: 500;
 }
 
@@ -1033,36 +1091,36 @@ defineExpose({ onMore, reload: load })
 
 /* 补充说明：深墨绿 */
 .btn.dark {
-  background: #35463c;
-  color: #fff;
+  background: #2f5a4c;
+  color: #fbf7ee;
 }
 
 /* 提前结束：砖红 */
 .btn.warm {
-  background: #bd5343;
-  color: #fff;
+  background: #b4503e;
+  color: #fbf7ee;
 }
 
 .btn.reject {
-  background: #fdf1ef;
-  color: #c65a4c;
-  border: 1rpx solid #f2d5cf;
+  background: #fbece9;
+  color: #b04b3c;
+  border: 1rpx solid #f0d8d2;
 }
 
 .btn.pass {
-  background: linear-gradient(135deg, #34d399, #22c55e);
-  color: #fff;
+  background: #2f5a4c;
+  color: #fbf7ee;
 }
 
 .hint {
   font-size: 25rpx;
-  color: #8a8f98;
+  color: #8b8578;
 }
 
 .voted-tip {
   text-align: center;
   font-size: 26rpx;
-  color: #9aa0a6;
+  color: #9a9488;
   padding: 18rpx 0;
 }
 
@@ -1073,18 +1131,19 @@ defineExpose({ onMore, reload: load })
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(20, 24, 22, 0.45);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
+  padding: 0 20rpx calc(20rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
 .sheet {
   width: 100%;
   background: #fff;
-  border-top-left-radius: 32rpx;
-  border-top-right-radius: 32rpx;
-  padding: 36rpx 32rpx 44rpx;
+  border-radius: 40rpx;
+  padding: 36rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
 }
 
 .sheet-head {
@@ -1096,11 +1155,12 @@ defineExpose({ onMore, reload: load })
 .sheet-title {
   font-size: 34rpx;
   font-weight: 700;
+  color: #1d2320;
 }
 
 .sheet-close {
   font-size: 32rpx;
-  color: #9aa0a6;
+  color: #9a9488;
   padding: 8rpx;
 }
 
@@ -1108,18 +1168,20 @@ defineExpose({ onMore, reload: load })
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #9aa0a6;
+  color: #9a9488;
 }
 
 .sheet-input {
   margin-top: 20rpx;
   width: 100%;
   min-height: 180rpx;
-  background: #f7f7f9;
+  background: #f8f4ec;
   border-radius: 18rpx;
   padding: 24rpx;
   font-size: 28rpx;
   line-height: 1.6;
+  color: #1d2320;
+  box-sizing: border-box;
 }
 
 .quick {
@@ -1131,8 +1193,8 @@ defineExpose({ onMore, reload: load })
 
 .quick-item {
   font-size: 23rpx;
-  color: #6b7280;
-  background: #f5f5f7;
+  color: #5f6b63;
+  background: #f4efe4;
   border-radius: 999rpx;
   padding: 8rpx 20rpx;
 }
@@ -1144,15 +1206,15 @@ defineExpose({ onMore, reload: load })
   border-radius: 999rpx;
   font-size: 30rpx;
   font-weight: 700;
-  color: #fff;
+  color: #fbf7ee;
   padding: 0;
 }
 
 .submit.pass {
-  background: linear-gradient(135deg, #34d399, #22c55e);
+  background: #2f5a4c;
 }
 
 .submit.reject {
-  background: linear-gradient(135deg, #f87171, #ef4444);
+  background: #b04b3c;
 }
 </style>

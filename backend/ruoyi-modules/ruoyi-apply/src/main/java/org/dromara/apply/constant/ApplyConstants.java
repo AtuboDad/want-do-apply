@@ -31,6 +31,12 @@ public interface ApplyConstants {
     /** 审批群内 */
     String VISIBILITY_GROUP = "1";
 
+    // ---------------- 审批方式 ----------------
+    /** 单人审批：一人表态即出结果 */
+    String MODE_SINGLE = "0";
+    /** 多人审批：时长内汇总多人意见 */
+    String MODE_MULTI = "1";
+
     // ---------------- 批条结论 ----------------
     /** 通过 */
     String VOTE_PASS = "1";

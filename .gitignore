@@ -56,5 +56,7 @@ application-local.yml
 # ===== 验证工具产生的临时文件 =====
 .playwright-cli/
 scripts/_tabbar_preview.png
+# 读 application-local.yml 里的库密码跑 SQL 的本地小工具，不跟着仓库走
+scripts/_db.py
 # 头像生成用的原图（10MB 级），成品在 miniapp/src/static/avatars/
 .tmp-avatars/

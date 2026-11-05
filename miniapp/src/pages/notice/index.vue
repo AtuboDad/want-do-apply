@@ -1,6 +1,10 @@
 <template>
+  <!-- #ifdef MP-WEIXIN -->
+  <!-- 弹层打开时禁掉页面原生滚动，否则手指在弹层上划，底下的页面会跟着动 -->
+  <page-meta :page-style="pageStyle" />
+  <!-- #endif -->
   <view class="page">
-    <NavBar title="消息" back bg="#ffffff">
+    <NavBar title="消息" back bg="#F6F2E9">
       <template #right>
         <text class="read-all" @tap="readAll">全部已读</text>
       </template>
@@ -27,6 +31,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { pageStyleWhen } from '../../utils/scroll-lock'
 import { onLoad, onReachBottom } from '@dcloudio/uni-app'
 import NavBar from '../../components/NavBar.vue'
 import OrderSheet from '../../components/OrderSheet.vue'
@@ -42,6 +47,8 @@ const hasMore = ref(true)
 const loading = ref(false)
 
 const sheetVisible = ref(false)
+/** 弹层打开时锁页面滚动（仅小程序生效） */
+const pageStyle = pageStyleWhen(() => sheetVisible.value)
 const sheetOrderId = ref(0)
 
 function openSheet(id: number) {
@@ -107,12 +114,12 @@ onReachBottom(() => {
 <style lang="scss" scoped>
 .page {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: #f6f2e9;
 }
 
 .read-all {
   font-size: 24rpx;
-  color: #ff6b35;
+  color: #2f5a4c;
   padding: 8rpx;
 }
 
@@ -137,7 +144,7 @@ onReachBottom(() => {
   width: 64rpx;
   height: 64rpx;
   border-radius: 16rpx;
-  background: #f5f5f7;
+  background: #f6f2e9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,12 +162,12 @@ onReachBottom(() => {
 .title {
   font-size: 27rpx;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1d2320;
 }
 
 .time {
   font-size: 21rpx;
-  color: #b8bcc2;
+  color: #b3ada1;
   flex-shrink: 0;
 }
 
@@ -168,7 +175,7 @@ onReachBottom(() => {
   display: block;
   margin-top: 8rpx;
   font-size: 25rpx;
-  color: #6b7280;
+  color: #5f6b63;
   line-height: 1.6;
 }
 </style>

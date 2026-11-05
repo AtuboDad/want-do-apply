@@ -9,6 +9,8 @@ export interface CreateOrderParams {
   images?: string
   category?: string
   visibility: string
+  /** 审批方式：0 单人审批 1 多人审批 */
+  approveMode?: string
   /** 审批时长（小时），1-72 */
   durationHours?: number
   groupId?: number | null
@@ -25,7 +27,7 @@ export function getSquare(params: {
 }
 
 /** 详情 */
-export function getDetail(id: number): Promise<OrderDetail> {
+export function getDetail(id: number | string): Promise<OrderDetail> {
   return request({ url: `/app/order/${id}` })
 }
 
@@ -35,33 +37,42 @@ export function createOrder(data: CreateOrderParams): Promise<number> {
 }
 
 /** 撤销 */
-export function cancelOrder(id: number): Promise<void> {
+export function cancelOrder(id: number | string): Promise<void> {
   return request({ url: `/app/order/${id}/cancel`, method: 'POST' })
 }
 
 /** 补充说明（发起人，仅审批中可用） */
-export function updateNote(id: number, note: string): Promise<void> {
+export function updateNote(id: number | string, note: string): Promise<void> {
   return request({ url: `/app/order/${id}/note`, method: 'POST', data: { note } })
 }
 
 /** 提前结束（发起人），按当前票数立即结算，返回结算后的状态 */
-export function finishEarly(id: number): Promise<string> {
+export function finishEarly(id: number | string): Promise<string> {
   return request({ url: `/app/order/${id}/finish`, method: 'POST' })
 }
 
 /** 删除 */
-export function removeOrder(id: number): Promise<void> {
+export function removeOrder(id: number | string): Promise<void> {
   return request({ url: `/app/order/${id}`, method: 'DELETE' })
 }
 
 /** 收藏切换 */
-export function toggleFavorite(id: number): Promise<boolean> {
+export function toggleFavorite(id: number | string): Promise<boolean> {
   return request({ url: `/app/order/${id}/favorite`, method: 'POST' })
 }
 
 /** 我的：apply-我提交的 vote-我处理的 favorite-我围观的 */
-export function getMine(type: 'apply' | 'vote' | 'favorite', pageNum = 1, pageSize = 10): Promise<PageData<OrderItem>> {
-  return request({ url: '/app/order/mine', data: { type, pageNum, pageSize } })
+export function getMine(
+  type: 'apply' | 'vote' | 'favorite',
+  pageNum = 1,
+  pageSize = 10,
+  keyword = '',
+  status = ''
+): Promise<PageData<OrderItem>> {
+  return request({
+    url: '/app/order/mine',
+    data: { type, pageNum, pageSize, keyword: keyword || undefined, status: status || undefined }
+  })
 }
 
 export interface ProfileData {

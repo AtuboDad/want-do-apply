@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import org.dromara.apply.domain.ApplyOrder;
@@ -57,6 +58,10 @@ public class ApplyOrderBo implements Serializable {
 
     /** 可见范围（0公开 1群内） */
     private String visibility;
+
+    /** 审批方式（0单人审批 1多人审批，默认多人） */
+    @Pattern(regexp = "^[01]$", message = "审批方式不合法")
+    private String approveMode;
 
     /** 审批时长（小时），1-72，默认 24 */
     @Min(value = 1, message = "审批时长至少 1 小时")

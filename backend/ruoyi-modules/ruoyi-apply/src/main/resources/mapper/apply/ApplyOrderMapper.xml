@@ -6,7 +6,7 @@
 
     <sql id="baseColumns">
         o.id, o.user_id, o.group_id, o.title, o.price, o.reason, o.substitute,
-        o.extra_note, o.images, o.category, o.visibility, o.duration_hours,
+        o.extra_note, o.images, o.category, o.visibility, o.approve_mode, o.duration_hours,
         o.status, o.pass_count, o.reject_count,
         o.vote_count, o.target_votes, o.comment_count, o.hot_score, o.expire_time,
         o.settle_time, o.audit_status, o.audit_remark, o.is_top, o.create_time
@@ -126,6 +126,12 @@
                 where o.del_flag = '0' and o.user_id = #{userId}
             </otherwise>
         </choose>
+        <if test="keyword != null and keyword != ''">
+            and (o.title like concat('%', #{keyword}, '%') or o.reason like concat('%', #{keyword}, '%'))
+        </if>
+        <if test="status != null and status != ''">
+            and o.status = #{status}
+        </if>
         order by o.create_time desc
     </select>
 

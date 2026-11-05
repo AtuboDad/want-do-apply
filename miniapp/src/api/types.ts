@@ -14,6 +14,8 @@ export interface OrderItem {
   imageList?: string[]
   category?: string
   visibility: string
+  /** 审批方式：0 单人（一人表态即出结果） 1 多人（汇总意见） */
+  approveMode?: string
   durationHours?: number
   status: string
   passCount: number

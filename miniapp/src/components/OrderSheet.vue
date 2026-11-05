@@ -1,5 +1,12 @@
 <template>
-  <view v-if="mounted" ref="maskRef" class="os-mask" :class="{ show: shown }" @tap="close">
+  <view
+    v-if="mounted"
+    ref="maskRef"
+    class="os-mask"
+    :class="{ show: shown }"
+    :style="{ paddingBottom: inset + 'px' }"
+    @tap="close"
+  >
     <!-- 只在顶部空白区拦截滑动，避免影响下面 sheet 里 scroll-view 的滚动 -->
     <view class="os-block" @touchmove.stop.prevent />
     <view class="os-sheet" :class="{ show: shown }" @tap.stop>
@@ -10,10 +17,17 @@
           <text class="os-title">审批详情</text>
           <view class="os-acts">
             <view class="os-icon" @tap="onMore">
-              <text>···</text>
+              <view class="dots">
+                <text class="dot" />
+                <text class="dot" />
+                <text class="dot" />
+              </view>
             </view>
             <view class="os-icon" @tap="close">
-              <text>✕</text>
+              <view class="cross">
+                <text class="cross-line" />
+                <text class="cross-line" />
+              </view>
             </view>
           </view>
         </view>
@@ -27,11 +41,12 @@
 <script setup lang="ts">
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 import OrderDetailPanel from './OrderDetailPanel.vue'
-import { lockPageScroll, unlockPageScroll, forwardWheelToSheet } from '../utils/scroll-lock'
+import { lockPageScroll, unlockPageScroll, forwardWheelToSheet, tabBarInsetPx } from '../utils/scroll-lock'
 
 const props = defineProps<{
   visible: boolean
-  orderId: number
+  /** 订单 ID 是雪花号，超过 JS 安全整数范围，必须按字符串传，别转 Number */
+  orderId: number | string
 }>()
 
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -41,6 +56,12 @@ const mounted = ref(false)
 const shown = ref(false)
 const panelRef = ref<InstanceType<typeof OrderDetailPanel> | null>(null)
 const maskRef = ref<unknown>(null)
+
+/**
+ * 底部菜单栏不再藏起来（藏起来用户会以为界面坏了），
+ * 改成让弹层悬在它上面：H5 量 tabBar 高度做底部内边距，小程序页面视口本就不含 tabBar。
+ */
+const inset = ref(0)
 
 let timer: ReturnType<typeof setTimeout> | null = null
 /** 快速开关时 lock/unlock 必须成对且幂等，否则引用计数会漏加漏减 */
@@ -95,20 +116,6 @@ function unbindWheel() {
   // #endif
 }
 
-/**
- * tabBar 是小程序的原生层，永远压在普通元素之上，
- * 不藏起来的话弹层底部的操作按钮会被它盖住。
- * 非 tabBar 页面调用这两个 API 会失败，忽略即可。
- */
-function toggleTabBar(show: boolean) {
-  const opts = { animation: false, fail: () => {} }
-  if (show) {
-    uni.showTabBar(opts)
-  } else {
-    uni.hideTabBar(opts)
-  }
-}
-
 watch(
   () => props.visible,
   async (visible) => {
@@ -118,7 +125,7 @@ watch(
     }
     if (visible) {
       mounted.value = true
-      toggleTabBar(false)
+      inset.value = tabBarInsetPx()
       lockPage()
       // 等一帧再切 class，否则 transition 不会触发
       await nextTick()
@@ -131,7 +138,6 @@ watch(
       timer = setTimeout(() => {
         unbindWheel()
         mounted.value = false
-        toggleTabBar(true)
         unlockPage()
       }, 300)
     }
@@ -139,13 +145,10 @@ watch(
   { immediate: true }
 )
 
-// 兜底：弹层没走正常关闭流程就被卸载时，别把 tabBar 和页面滚动留在锁定状态
+// 兜底：弹层没走正常关闭流程就被卸载时，别把页面滚动留在锁定状态
 onUnmounted(() => {
   unbindWheel()
-  if (mounted.value) {
-    toggleTabBar(true)
-    unlockPage()
-  }
+  if (mounted.value) unlockPage()
 })
 
 function close() {
@@ -170,7 +173,7 @@ function onMore() {
   display: flex;
   align-items: flex-end;
   /* 左右 + 底部留白，卡片从底部「浮」起来，不跟屏幕边缘粘在一起 */
-  padding: 0 22rpx calc(22rpx + env(safe-area-inset-bottom));
+  padding: 0 22rpx calc(20rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -190,7 +193,7 @@ function onMore() {
 .os-sheet {
   width: 100%;
   height: 82vh;
-  background: #f5f5f7;
+  background: #f6f2e9;
   /* 四角都圆，像一张独立浮起的卡片 */
   border-radius: 44rpx;
   box-shadow: 0 16rpx 60rpx rgba(0, 0, 0, 0.22);
@@ -209,7 +212,7 @@ function onMore() {
   position: relative;
   flex-shrink: 0;
   padding-top: 16rpx;
-  background: #f5f5f7;
+  background: #f6f2e9;
   border-top-left-radius: 44rpx;
   border-top-right-radius: 44rpx;
 }
@@ -218,7 +221,7 @@ function onMore() {
   width: 72rpx;
   height: 8rpx;
   border-radius: 999rpx;
-  background: #c9c9d1;
+  background: #d8d2c4;
   margin: 0 auto 12rpx;
 }
 
@@ -233,25 +236,61 @@ function onMore() {
 .os-title {
   font-size: 32rpx;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #1d2320;
 }
 
 .os-acts {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: 14rpx;
 }
 
 .os-icon {
   width: 60rpx;
   height: 60rpx;
   border-radius: 50%;
-  background: #ebebef;
+  background: rgba(31, 74, 60, 0.07);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26rpx;
-  color: #6b7280;
   line-height: 1;
+}
+
+/* 三个点：用实体圆点画，比字符「···」基线稳、也不会被字体带歪 */
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 7rpx;
+}
+
+.dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #43514a;
+}
+
+.cross {
+  position: relative;
+  width: 26rpx;
+  height: 26rpx;
+}
+
+.cross-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 3rpx;
+  border-radius: 999rpx;
+  background: #43514a;
+}
+
+.cross-line:first-child {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.cross-line:last-child {
+  transform: translateY(-50%) rotate(-45deg);
 }
 </style>
