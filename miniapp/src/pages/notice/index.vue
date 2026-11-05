@@ -72,23 +72,28 @@ function iconOf(type: string) {
   }
 }
 
+/** 只有最新一次请求的结果才落地，见 mine 页同名变量的说明 */
+let reqSeq = 0
+
 async function load(reset = false) {
-  if (loading.value) return
   if (reset) {
     pageNum.value = 1
     hasMore.value = true
+  } else if (loading.value || !hasMore.value) {
+    return
   }
-  if (!hasMore.value) return
+  const seq = ++reqSeq
   loading.value = true
   try {
     await ensureLogin()
     const res = await getNotices(pageNum.value, 20)
+    if (seq !== reqSeq) return
     const rows = res.rows || []
     list.value = reset ? rows : list.value.concat(rows)
     hasMore.value = rows.length >= 20
     pageNum.value += 1
   } finally {
-    loading.value = false
+    if (seq === reqSeq) loading.value = false
   }
 }
 

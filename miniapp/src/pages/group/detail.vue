@@ -90,22 +90,28 @@ async function loadGroup() {
   group.value = await getGroup(groupId.value)
 }
 
+/** 只有最新一次请求的结果才落地，见 mine 页同名变量的说明 */
+let reqSeq = 0
+
 async function loadOrders(reset = false) {
-  if (loading.value) return
   if (reset) {
     pageNum.value = 1
     hasMore.value = true
+  } else if (loading.value || !hasMore.value) {
+    // 只有「加载更多」需要防重，切成最新/最热这类重置请求必须放行
+    return
   }
-  if (!hasMore.value) return
+  const seq = ++reqSeq
   loading.value = true
   try {
     const res = await getGroupOrders(groupId.value, { sort: sort.value, pageNum: pageNum.value, pageSize: 10 })
+    if (seq !== reqSeq) return
     const rows = res.rows || []
     orders.value = reset ? rows : orders.value.concat(rows)
     hasMore.value = rows.length >= 10
     pageNum.value += 1
   } finally {
-    loading.value = false
+    if (seq === reqSeq) loading.value = false
   }
 }
 

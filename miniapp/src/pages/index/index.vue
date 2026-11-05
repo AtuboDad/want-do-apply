@@ -98,17 +98,23 @@ function handleSheetClose(changed?: boolean) {
   if (changed) load(true)
 }
 
+/** 只有最新一次请求的结果才落地，见 mine 页同名变量的说明 */
+let reqSeq = 0
+
 async function load(reset = false) {
-  if (loading.value) return
   if (reset) {
     pageNum.value = 1
     hasMore.value = true
+  } else if (loading.value || !hasMore.value) {
+    // 只有「加载更多」需要防重，切 tab 这类重置请求必须放行
+    return
   }
-  if (!hasMore.value) return
+  const seq = ++reqSeq
   loading.value = true
   try {
     await ensureLogin()
     const res = await getSquare({ sort: sort.value, pageNum: pageNum.value, pageSize })
+    if (seq !== reqSeq) return
     const rows = res.rows || []
     if (reset) {
       list.value = rows
@@ -121,7 +127,7 @@ async function load(reset = false) {
   } catch (e) {
     // 错误已在 request 中提示
   } finally {
-    loading.value = false
+    if (seq === reqSeq) loading.value = false
   }
 }
 

@@ -230,22 +230,38 @@ async function loadProfile() {
   unread.value = await getUnread().catch(() => 0)
 }
 
+/**
+ * 请求序号：只有最新一次请求的结果才允许落地。
+ *
+ * 这里踩过坑：原来开头一句 `if (loading.value) return`，
+ * 用户在首屏列表还没回来时就去搜索 / 切 tab / 点状态，
+ * 重置请求直接被吞掉 —— 表现就是「搜了没反应」「明明有这单却查不到」。
+ * 现在：重置（搜索、切 tab、切状态）永远放行；翻页才防重；
+ * 晚回来的旧请求按序号丢弃，免得把新结果又覆盖成旧列表。
+ */
+let reqSeq = 0
+
 async function loadOrders(reset = false) {
-  if (loading.value) return
   if (reset) {
     pageNum.value = 1
     hasMore.value = true
+  } else if (loading.value || !hasMore.value) {
+    // 只有「加载更多」需要防重
+    return
   }
-  if (!hasMore.value) return
+  const seq = ++reqSeq
   loading.value = true
   try {
     const res = await getMine(type.value, pageNum.value, 10, keyword.value, status.value)
+    if (seq !== reqSeq) return // 期间又发了新请求，这次结果作废
     const rows = res.rows || []
     orders.value = reset ? rows : orders.value.concat(rows)
     hasMore.value = rows.length >= 10
     pageNum.value += 1
+  } catch (e) {
+    // 提示已在 request 里统一弹过了
   } finally {
-    loading.value = false
+    if (seq === reqSeq) loading.value = false
   }
 }
 
