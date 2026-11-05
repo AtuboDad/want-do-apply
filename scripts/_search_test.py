@@ -94,6 +94,7 @@ def main():
         pg.wait_for_timeout(2000)
         print("  搜「台灯」请求:", [norm(u) for u in reqs])
         print("  搜「台灯」条数:", len(pg.evaluate(JS_CARDS)), "→", "✅" if len(pg.evaluate(JS_CARDS)) == 1 else "❌")
+        pg.screenshot(path=r"E:\workspaces\WorkBuddy\want-do-apply\.playwright-cli\final\10-search-mine.png")
 
         reqs.clear()
         pg.keyboard.press("Control+A")
